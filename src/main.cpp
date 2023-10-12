@@ -25,8 +25,76 @@ int main(void) {
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
 
+    auto vertex_shader = R"(
+        #version 400
+        in vec3 pos;
+        in vec3 color;
+
+        out vec3 vColor;
+
+        void main() {
+            gl_Position = vec4(pos, 1.0);
+            vColor = color;
+        }
+    )";
+
+    auto geometry_shader = R"(
+        #version 400
+        layout(points) in;
+        layout(line_strip, max_vertices = 5) out;
+
+        in vec3 vColor[];
+        out vec3 fColor;
+
+        void main() {
+            fColor = vColor[0];
+            gl_Position = gl_in[0].gl_Position + vec4(-0.1, 0.0, 0.0, 0.0);
+            EmitVertex();
+            gl_Position = gl_in[0].gl_Position + vec4(0.0, 0.1, 0.0, 0.0);
+            EmitVertex();
+            gl_Position = gl_in[0].gl_Position + vec4(0.1, 0.0, 0.0, 0.0);
+            EmitVertex();
+            gl_Position = gl_in[0].gl_Position + vec4(0.0, -0.1, 0.0, 0.0);
+            EmitVertex();
+            gl_Position = gl_in[0].gl_Position + vec4(-0.1, 0.0, 0.0, 0.0);
+            EmitVertex();
+            EndPrimitive();
+        }
+    )";
+
+
+    auto fragment_shader = R"(
+        #version 400
+        in vec3 fColor;
+        out vec4 frag_color;
+
+        void main() {
+            frag_color = vec4(fColor, 1.0);
+        }
+    )";
+
+    auto vs = glCreateShader(GL_VERTEX_SHADER);
+    glShaderSource(vs, 1, &vertex_shader, NULL);
+    glCompileShader(vs);
+
+    auto gs = glCreateShader(GL_GEOMETRY_SHADER);
+    glShaderSource(gs, 1, &geometry_shader, NULL);
+    glCompileShader(gs);
+
+    auto fs = glCreateShader(GL_FRAGMENT_SHADER);
+    glShaderSource(fs, 1, &fragment_shader, NULL);
+    glCompileShader(fs);
+
+    auto shader_program = glCreateProgram();
+    glAttachShader(shader_program, vs);
+    glAttachShader(shader_program, gs);
+    glAttachShader(shader_program, fs);
+    glLinkProgram(shader_program);
+
     float points[] = {
-        0.0, 0.5, 0.0, 0.5, -0.5, 0.0, -0.5, -0.5, 0.0,
+        0.0,  0.5,  0.0, 1.0, 0.0, 0.0, // red
+        0.5,  -0.5, 0.0, 0.0, 1.0, 0.0, // green
+        -0.5, -0.5, 0.0, 0.0, 0.0, 1.0  // blue
     };
 
     GLuint vbo;
@@ -37,44 +105,22 @@ int main(void) {
     GLuint vao;
     glGenVertexArrays(1, &vao);
     glBindVertexArray(vao);
-    glEnableVertexAttribArray(0);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
 
-    auto vertex_shader = R"(
-        #version 400
-        in vec3 vp;
-        void main() {
-            gl_Position = vec4(vp, 1.0);
-        }
-    )";
+    auto posAttrib = glGetAttribLocation(shader_program, "pos");
+    glEnableVertexAttribArray(posAttrib);
+    glVertexAttribPointer(posAttrib, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float),
+                          NULL);
+    auto colorAttrib = glGetAttribLocation(shader_program, "color");
+    glEnableVertexAttribArray(colorAttrib);
+    glVertexAttribPointer(colorAttrib, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float),
+                          (void*)(3 * sizeof(float)));
 
-    auto fragment_shader = R"(
-        #version 400
-        out vec4 frag_color;
-        void main() {
-            frag_color = vec4(0.5, 0.0, 0.5, 1.0);
-        }
-    )";
-
-    auto vs = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(vs, 1, &vertex_shader, NULL);
-    glCompileShader(vs);
-
-    auto fs = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(fs, 1, &fragment_shader, NULL);
-    glCompileShader(fs);
-
-    auto shader_program = glCreateProgram();
-    glAttachShader(shader_program, fs);
-    glAttachShader(shader_program, vs);
-    glLinkProgram(shader_program);
-
-    while(!glfwWindowShouldClose(window)) {
+    while (!glfwWindowShouldClose(window)) {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glUseProgram(shader_program);
         glBindVertexArray(vao);
-        glDrawArrays(GL_TRIANGLES, 0, 3);
+        glDrawArrays(GL_POINTS, 0, 3);
         glfwPollEvents();
         glfwSwapBuffers(window);
     }
