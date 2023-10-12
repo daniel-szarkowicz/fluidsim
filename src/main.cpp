@@ -2,6 +2,15 @@
 #include <GLFW/glfw3.h>
 #include <stdio.h>
 
+void GLAPIENTRY message_callback(GLenum source, GLenum type, GLuint id,
+                                GLenum severity, GLsizei length,
+                                const GLchar* message, const void* userParam) {
+    fprintf(stderr,
+            "GL CALLBACK: %s type = 0x%x, severity = 0x%x, message = %s\n",
+            (type == GL_DEBUG_TYPE_ERROR ? "** GL ERROR **" : ""), type,
+            severity, message);
+}
+
 int main(void) {
     if (!glfwInit()) {
         fprintf(stderr, "GLFW init error\n");
@@ -22,6 +31,8 @@ int main(void) {
     printf("Renderer: %s\n", renderer);
     printf("OpenGL version: %s\n", version);
 
+    //glEnable(GL_DEBUG_OUTPUT);
+    glDebugMessageCallback(message_callback, 0);
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
 
@@ -41,35 +52,53 @@ int main(void) {
     auto geometry_shader = R"(
         #version 400
         layout(points) in;
-        layout(line_strip, max_vertices = 5) out;
+        layout(triangle_strip, max_vertices = 4) out;
+
+        uniform float radius;
 
         in vec3 vColor[];
         out vec3 fColor;
+        out vec3 fCenter;
+        out vec3 fPosition;
 
         void main() {
             fColor = vColor[0];
-            gl_Position = gl_in[0].gl_Position + vec4(-0.1, 0.0, 0.0, 0.0);
+            fCenter = gl_in[0].gl_Position.xyz;
+
+            gl_Position = gl_in[0].gl_Position + vec4(-radius, -radius, 0.0, 0.0);
+            fPosition = gl_Position.xyz;
             EmitVertex();
-            gl_Position = gl_in[0].gl_Position + vec4(0.0, 0.1, 0.0, 0.0);
+
+            gl_Position = gl_in[0].gl_Position + vec4(-radius, radius, 0.0, 0.0);
+            fPosition = gl_Position.xyz;
             EmitVertex();
-            gl_Position = gl_in[0].gl_Position + vec4(0.1, 0.0, 0.0, 0.0);
+
+            gl_Position = gl_in[0].gl_Position + vec4(radius, -radius, 0.0, 0.0);
+            fPosition = gl_Position.xyz;
             EmitVertex();
-            gl_Position = gl_in[0].gl_Position + vec4(0.0, -0.1, 0.0, 0.0);
-            EmitVertex();
-            gl_Position = gl_in[0].gl_Position + vec4(-0.1, 0.0, 0.0, 0.0);
+
+            gl_Position = gl_in[0].gl_Position + vec4(radius, radius, 0.0, 0.0);
+            fPosition = gl_Position.xyz;
             EmitVertex();
             EndPrimitive();
         }
     )";
 
-
     auto fragment_shader = R"(
         #version 400
+        uniform float radius;
+
         in vec3 fColor;
+        in vec3 fCenter;
+        in vec3 fPosition;
         out vec4 frag_color;
 
         void main() {
-            frag_color = vec4(fColor, 1.0);
+            if (distance(fCenter, fPosition) < radius) {
+                frag_color = vec4(fColor, 1.0);
+            } else {
+                frag_color = vec4(0.0, 0.0, 0.0, 0.0);
+            }
         }
     )";
 
@@ -115,6 +144,9 @@ int main(void) {
     glEnableVertexAttribArray(colorAttrib);
     glVertexAttribPointer(colorAttrib, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float),
                           (void*)(3 * sizeof(float)));
+
+    auto radiusUniform = glGetUniformLocation(shader_program, "radius");
+    glProgramUniform1f(shader_program, radiusUniform, 0.1);
 
     while (!glfwWindowShouldClose(window)) {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
