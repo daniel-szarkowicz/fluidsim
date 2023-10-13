@@ -31,6 +31,10 @@ GLuint load_shader(const char* filename, GLenum type) {
     return shader;
 }
 
+void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
+    glViewport(0, 0, width, height);
+}
+
 int main(void) {
     if (!glfwInit()) {
         fprintf(stderr, "GLFW init error\n");
@@ -44,6 +48,7 @@ int main(void) {
         return 1;
     }
     glfwMakeContextCurrent(window);
+    glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
     glewInit();
     auto renderer = glGetString(GL_RENDERER);
@@ -99,8 +104,8 @@ int main(void) {
         glUseProgram(shader_program);
         glBindVertexArray(vao);
         glDrawArrays(GL_POINTS, 0, 3);
-        glfwPollEvents();
         glfwSwapBuffers(window);
+        glfwPollEvents();
     }
 
     glfwTerminate();
