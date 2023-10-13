@@ -1,6 +1,9 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <stdio.h>
+#include <fstream>
+#include <sstream>
+#include <string>
 
 void GLAPIENTRY message_callback(GLenum source, GLenum type, GLuint id,
                                 GLenum severity, GLsizei length,
@@ -9,6 +12,23 @@ void GLAPIENTRY message_callback(GLenum source, GLenum type, GLuint id,
             "GL CALLBACK: %s type = 0x%x, severity = 0x%x, message = %s\n",
             (type == GL_DEBUG_TYPE_ERROR ? "** GL ERROR **" : ""), type,
             severity, message);
+}
+
+GLuint load_shader(const char* filename, GLenum type) {
+    std::ifstream file(filename);
+    if (!file.is_open()) {
+        fprintf(stderr, "ERROR: Could not open shader `%s`\n", filename);
+        return 0;
+    }
+    std::ostringstream ss;
+    ss << file.rdbuf();
+    std::string s(ss.str());
+    auto source = s.c_str();
+
+    auto shader = glCreateShader(type);
+    glShaderSource(shader, 1, &source, NULL);
+    glCompileShader(shader);
+    return shader;
 }
 
 int main(void) {
@@ -36,83 +56,9 @@ int main(void) {
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
 
-    auto vertex_shader = R"(
-        #version 400
-        in vec3 pos;
-        in vec3 color;
-
-        out vec3 vColor;
-
-        void main() {
-            gl_Position = vec4(pos, 1.0);
-            vColor = color;
-        }
-    )";
-
-    auto geometry_shader = R"(
-        #version 400
-        layout(points) in;
-        layout(triangle_strip, max_vertices = 4) out;
-
-        uniform float radius;
-
-        in vec3 vColor[];
-        out vec3 fColor;
-        out vec3 fCenter;
-        out vec3 fPosition;
-
-        void main() {
-            fColor = vColor[0];
-            fCenter = gl_in[0].gl_Position.xyz;
-
-            gl_Position = gl_in[0].gl_Position + vec4(-radius, -radius, 0.0, 0.0);
-            fPosition = gl_Position.xyz;
-            EmitVertex();
-
-            gl_Position = gl_in[0].gl_Position + vec4(-radius, radius, 0.0, 0.0);
-            fPosition = gl_Position.xyz;
-            EmitVertex();
-
-            gl_Position = gl_in[0].gl_Position + vec4(radius, -radius, 0.0, 0.0);
-            fPosition = gl_Position.xyz;
-            EmitVertex();
-
-            gl_Position = gl_in[0].gl_Position + vec4(radius, radius, 0.0, 0.0);
-            fPosition = gl_Position.xyz;
-            EmitVertex();
-            EndPrimitive();
-        }
-    )";
-
-    auto fragment_shader = R"(
-        #version 400
-        uniform float radius;
-
-        in vec3 fColor;
-        in vec3 fCenter;
-        in vec3 fPosition;
-        out vec4 frag_color;
-
-        void main() {
-            if (distance(fCenter, fPosition) < radius) {
-                frag_color = vec4(fColor, 1.0);
-            } else {
-                frag_color = vec4(0.0, 0.0, 0.0, 0.0);
-            }
-        }
-    )";
-
-    auto vs = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(vs, 1, &vertex_shader, NULL);
-    glCompileShader(vs);
-
-    auto gs = glCreateShader(GL_GEOMETRY_SHADER);
-    glShaderSource(gs, 1, &geometry_shader, NULL);
-    glCompileShader(gs);
-
-    auto fs = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(fs, 1, &fragment_shader, NULL);
-    glCompileShader(fs);
+    auto vs = load_shader("src/vertex.glsl", GL_VERTEX_SHADER);
+    auto gs = load_shader("src/geometry.glsl", GL_GEOMETRY_SHADER);
+    auto fs = load_shader("src/fragment.glsl", GL_FRAGMENT_SHADER);
 
     auto shader_program = glCreateProgram();
     glAttachShader(shader_program, vs);
