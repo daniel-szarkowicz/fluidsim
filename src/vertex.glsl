@@ -1,6 +1,6 @@
 #version 400
 
-uniform mat4 MVP;
+uniform mat4 model_view;
 
 in vec3 center;
 in vec3 color;
@@ -10,7 +10,7 @@ out vec3 vColor;
 out float vRadius;
 
 void main() {
-    gl_Position = MVP * vec4(center, 1.0);
+    gl_Position = model_view * vec4(center, 1.0);
     vColor = color;
     vRadius = radius;
 }

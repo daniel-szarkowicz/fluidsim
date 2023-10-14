@@ -1,3 +1,4 @@
+#include "camera.hpp"
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <fstream>
@@ -42,8 +43,10 @@ GLuint load_shader(const char* filename, GLenum type) {
     return shader;
 }
 
+Camera camera(60, 640.0 / 480.0, 0.1, 1000.0, vec3(0, 0, 2), vec3(0, 0, 0));
 void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
     glViewport(0, 0, width, height);
+    camera.aspect_ratio = (float)width / (float)height;
 }
 
 int main(void) {
@@ -67,8 +70,8 @@ int main(void) {
     printf("Renderer: %s\n", renderer);
     printf("OpenGL version: %s\n", version);
 
-    glEnable(GL_DEBUG_OUTPUT);
-    glDebugMessageCallback(message_callback, 0);
+    // glEnable(GL_DEBUG_OUTPUT);
+    // glDebugMessageCallback(message_callback, 0);
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
 
@@ -133,7 +136,8 @@ int main(void) {
                           GL_FLOAT, GL_FALSE, sizeof(Sphere),
                           (void*)offsetof(Sphere, radius));
 
-    auto mvpUniform = glGetUniformLocation(shader_program, "MVP");
+    auto viewUniform = glGetUniformLocation(shader_program, "model_view");
+    auto projectionUniform = glGetUniformLocation(shader_program, "projection");
 
     auto rot_mat =
         glm::rotate(glm::mat4(1.0f), glm::radians(1.0f), vec3(0, 0, 1));
@@ -141,18 +145,15 @@ int main(void) {
     auto camera_rot =
         glm::rotate(glm::mat4(1.0f), glm::radians(0.5f), vec3(0, 1, 0));
 
-    auto projection =
-        glm::perspective(glm::radians(60.0f), 640.0f / 480.0f, 0.1f, 10.0f);
-
-    auto camera_pos = vec3(0, 0, -2);
-
     while (!glfwWindowShouldClose(window)) {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glUseProgram(shader_program);
-        camera_pos = glm::vec3(glm::vec4(camera_pos, 1.0f) * camera_rot);
-        auto view = glm::lookAt(camera_pos, vec3(0, 0, 0), vec3(0, 1, 0));
-        auto mvp = projection * view;
-        glUniformMatrix4fv(mvpUniform, 1, GL_FALSE, glm::value_ptr(mvp));
+        camera.transform_position(camera_rot);
+        auto view = camera.view();
+        auto projection = camera.projection();
+        glUniformMatrix4fv(viewUniform, 1, GL_FALSE, glm::value_ptr(view));
+        glUniformMatrix4fv(projectionUniform, 1, GL_FALSE,
+                           glm::value_ptr(projection));
         glBindVertexArray(vao);
         for (auto& s : spheres) {
             s.center = vec3(glm::vec4(s.center, 1.0) * rot_mat);
