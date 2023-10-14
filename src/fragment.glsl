@@ -11,6 +11,6 @@ void main() {
     if (distance(fCenter, fPosition) < fRadius) {
         frag_color = vec4(fColor, 1.0);
     } else {
-        frag_color = vec4(0.0, 0.0, 0.0, 0.0);
+        discard;
     }
 }

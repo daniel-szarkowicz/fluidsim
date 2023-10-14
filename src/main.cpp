@@ -3,6 +3,7 @@
 #include <fstream>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 #include <sstream>
 #include <stdio.h>
 #include <string>
@@ -66,12 +67,10 @@ int main(void) {
     printf("Renderer: %s\n", renderer);
     printf("OpenGL version: %s\n", version);
 
-    //glEnable(GL_DEBUG_OUTPUT);
+    glEnable(GL_DEBUG_OUTPUT);
     glDebugMessageCallback(message_callback, 0);
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     auto vs = load_shader("src/vertex.glsl", GL_VERTEX_SHADER);
     auto gs = load_shader("src/geometry.glsl", GL_GEOMETRY_SHADER);
@@ -102,7 +101,7 @@ int main(void) {
         {
             .center = vec3(-0.5, 0.0, 0.0),
             .color = vec3(1.0, 1.0, 1.0),
-            .radius = 0.05,
+            .radius = 0.15,
         },
     };
 
@@ -134,19 +133,33 @@ int main(void) {
                           GL_FLOAT, GL_FALSE, sizeof(Sphere),
                           (void*)offsetof(Sphere, radius));
 
+    auto mvpUniform = glGetUniformLocation(shader_program, "MVP");
+
     auto rot_mat =
         glm::rotate(glm::mat4(1.0f), glm::radians(1.0f), vec3(0, 0, 1));
+
+    auto camera_rot =
+        glm::rotate(glm::mat4(1.0f), glm::radians(0.5f), vec3(0, 1, 0));
+
+    auto projection =
+        glm::perspective(glm::radians(60.0f), 640.0f / 480.0f, 0.1f, 10.0f);
+
+    auto camera_pos = vec3(0, 0, -2);
 
     while (!glfwWindowShouldClose(window)) {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glUseProgram(shader_program);
+        camera_pos = glm::vec3(glm::vec4(camera_pos, 1.0f) * camera_rot);
+        auto view = glm::lookAt(camera_pos, vec3(0, 0, 0), vec3(0, 1, 0));
+        auto mvp = projection * view;
+        glUniformMatrix4fv(mvpUniform, 1, GL_FALSE, glm::value_ptr(mvp));
         glBindVertexArray(vao);
         for (auto& s : spheres) {
             s.center = vec3(glm::vec4(s.center, 1.0) * rot_mat);
         }
         glBufferData(GL_ARRAY_BUFFER, sizeof(spheres), spheres,
                      GL_DYNAMIC_DRAW);
-        glDrawArrays(GL_POINTS, 0, sizeof(spheres)/sizeof(Sphere));
+        glDrawArrays(GL_POINTS, 0, sizeof(spheres) / sizeof(Sphere));
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
