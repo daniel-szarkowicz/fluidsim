@@ -1,16 +1,22 @@
-#version 400
+#version 430
 
-uniform mat4 model_view;
+uniform mat4 view;
 
-in vec3 center;
-in vec3 color;
-in float radius;
+struct Sphere {
+    vec4 center;
+    vec4 color;
+    float radius;
+};
+
+layout(std430, binding = 3) readonly buffer points {
+    Sphere spheres[];
+};
 
 out vec3 vColor;
 out float vRadius;
 
 void main() {
-    gl_Position = model_view * vec4(center, 1.0);
-    vColor = color;
-    vRadius = radius;
+    gl_Position = view * spheres[gl_InstanceID].center;
+    vColor = spheres[gl_InstanceID].color.xyz;
+    vRadius = spheres[gl_InstanceID].radius;
 }

@@ -10,11 +10,13 @@
 #include <string>
 
 using glm::vec3;
+using glm::vec4;
 
 struct Sphere {
-    vec3 center;
-    vec3 color;
+    vec4 center;
+    vec4 color;
     float radius;
+    float _padding[3];
 };
 
 void GLAPIENTRY message_callback(GLenum source, GLenum type, GLuint id,
@@ -87,63 +89,42 @@ int main(void) {
 
     Sphere spheres[]{
         {
-            .center = vec3(0.0, 0.5, 0.0),
-            .color = vec3(1.0, 0.0, 0.0),
+            .center = vec4(0.0, 0.5, 0.5, 1.0),
+            .color = vec4(1.0, 0.0, 0.0, 1.0),
             .radius = 0.2,
         },
         {
-            .center = vec3(0.5, 0.0, 0.0),
-            .color = vec3(0.0, 1.0, 0.0),
+            .center = vec4(0.5, 0.0, 0.5, 1.0),
+            .color = vec4(0.0, 1.0, 0.0, 1.0),
             .radius = 0.15,
         },
         {
-            .center = vec3(0.0, -0.5, 0.0),
-            .color = vec3(0.0, 0.0, 1.0),
+            .center = vec4(0.0, -0.5, 0.5, 1.0),
+            .color = vec4(0.0, 0.0, 1.0, 1.0),
             .radius = 0.1,
         },
         {
-            .center = vec3(-0.5, 0.0, 0.0),
-            .color = vec3(1.0, 1.0, 1.0),
+            .center = vec4(-0.5, 0.0, 0.5, 1.0),
+            .color = vec4(1.0, 1.0, 1.0, 1.0),
             .radius = 0.15,
         },
     };
 
-    GLuint vbo;
-    glGenBuffers(1, &vbo);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(spheres), spheres, GL_DYNAMIC_DRAW);
+    GLuint ssbo;
+    glGenBuffers(1, &ssbo);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(spheres), spheres,
+                 GL_DYNAMIC_DRAW);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, ssbo);
 
-    GLuint vao;
-    glGenVertexArrays(1, &vao);
-    glBindVertexArray(vao);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-
-    auto centerAttrib = glGetAttribLocation(shader_program, "center");
-    glEnableVertexAttribArray(centerAttrib);
-    glVertexAttribPointer(centerAttrib, sizeof(Sphere::center) / sizeof(float),
-                          GL_FLOAT, GL_FALSE, sizeof(Sphere),
-                          (void*)offsetof(Sphere, center));
-
-    auto colorAttrib = glGetAttribLocation(shader_program, "color");
-    glEnableVertexAttribArray(colorAttrib);
-    glVertexAttribPointer(colorAttrib, sizeof(Sphere::color) / sizeof(float),
-                          GL_FLOAT, GL_FALSE, sizeof(Sphere),
-                          (void*)offsetof(Sphere, color));
-
-    auto radiusAttrib = glGetAttribLocation(shader_program, "radius");
-    glEnableVertexAttribArray(radiusAttrib);
-    glVertexAttribPointer(radiusAttrib, sizeof(Sphere::radius) / sizeof(float),
-                          GL_FLOAT, GL_FALSE, sizeof(Sphere),
-                          (void*)offsetof(Sphere, radius));
-
-    auto viewUniform = glGetUniformLocation(shader_program, "model_view");
+    auto viewUniform = glGetUniformLocation(shader_program, "view");
     auto projectionUniform = glGetUniformLocation(shader_program, "projection");
 
     auto rot_mat =
         glm::rotate(glm::mat4(1.0f), glm::radians(1.0f), vec3(0, 0, 1));
 
     auto camera_rot =
-        glm::rotate(glm::mat4(1.0f), glm::radians(0.5f), vec3(0, 1, 0));
+        glm::rotate(glm::mat4(1.0f), glm::radians(0.2f), vec3(0, 1, 0));
 
     while (!glfwWindowShouldClose(window)) {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -154,13 +135,14 @@ int main(void) {
         glUniformMatrix4fv(viewUniform, 1, GL_FALSE, glm::value_ptr(view));
         glUniformMatrix4fv(projectionUniform, 1, GL_FALSE,
                            glm::value_ptr(projection));
-        glBindVertexArray(vao);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
         for (auto& s : spheres) {
-            s.center = vec3(glm::vec4(s.center, 1.0) * rot_mat);
+            s.center = rot_mat * s.center;
         }
-        glBufferData(GL_ARRAY_BUFFER, sizeof(spheres), spheres,
+        glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(spheres), spheres,
                      GL_DYNAMIC_DRAW);
-        glDrawArrays(GL_POINTS, 0, sizeof(spheres) / sizeof(Sphere));
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, ssbo);
+        glDrawArraysInstanced(GL_POINTS, 0, 1, 4);
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
