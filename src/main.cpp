@@ -45,10 +45,8 @@ GLuint load_shader(const char* filename, GLenum type) {
     return shader;
 }
 
-Camera camera(60, 640.0 / 480.0, 0.1, 1000.0, vec3(0, 0, 2), vec3(0, 0, 0));
 void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
     glViewport(0, 0, width, height);
-    camera.aspect_ratio = (float)width / (float)height;
 }
 
 int main(void) {
@@ -123,18 +121,15 @@ int main(void) {
     auto rot_mat =
         glm::rotate(glm::mat4(1.0f), glm::radians(1.0f), vec3(0, 0, 1));
 
-    auto camera_rot =
-        glm::rotate(glm::mat4(1.0f), glm::radians(0.2f), vec3(0, 1, 0));
-
+    auto camera = OrbitingCamera(vec3(0, 0, 0), 2, 0, 0);
     while (!glfwWindowShouldClose(window)) {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glUseProgram(shader_program);
-        camera.transform_position(camera_rot);
-        auto view = camera.view();
-        auto projection = camera.projection();
-        glUniformMatrix4fv(viewUniform, 1, GL_FALSE, glm::value_ptr(view));
+        camera.yaw += 1;
+        glUniformMatrix4fv(viewUniform, 1, GL_FALSE,
+                           glm::value_ptr(camera.view()));
         glUniformMatrix4fv(projectionUniform, 1, GL_FALSE,
-                           glm::value_ptr(projection));
+                           glm::value_ptr(camera.projection()));
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
         for (auto& s : spheres) {
             s.center = rot_mat * s.center;
