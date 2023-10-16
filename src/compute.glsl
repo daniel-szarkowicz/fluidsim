@@ -13,9 +13,9 @@ layout(std430, binding = 3) buffer points {
     Sphere spheres[];
 };
 
-uniform vec4 gravity = vec4(0, -0.0008, 0, 0);
-uniform vec3 low_bound = vec3(-3, -3, -3);
-uniform vec3 high_bound = vec3(3, 3, 3);
+uniform vec4 gravity;
+uniform vec3 low_bound;
+uniform vec3 high_bound;
 
 void main() {
     uint i = gl_GlobalInvocationID.x;

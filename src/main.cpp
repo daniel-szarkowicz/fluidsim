@@ -1,3 +1,4 @@
+#include <vector>
 #define IMGUI_IMPL_OPENGL_LOADER_CUSTOM
 #include "camera.hpp"
 #include "imgui.h"
@@ -111,44 +112,39 @@ int main(void) {
     glAttachShader(compute_program, cs);
     glLinkProgram(compute_program);
 
-    Sphere spheres[]{
-        {
-            .center = vec4(0.0, 0.5, 0.5, 1.0),
-            .velocity = vec4(glm::ballRand(0.02), 0.0),
-            .color = vec4(1.0, 0.0, 0.0, 1.0),
-            .radius = 0.2,
-        },
-        {
-            .center = vec4(0.5, 0.0, 0.5, 1.0),
-            .velocity = vec4(glm::ballRand(0.02), 0.0),
-            .color = vec4(0.0, 1.0, 0.0, 1.0),
-            .radius = 0.15,
-        },
-        {
-            .center = vec4(0.0, -0.5, 0.5, 1.0),
-            .velocity = vec4(glm::ballRand(0.02), 0.0),
-            .color = vec4(0.0, 0.0, 1.0, 1.0),
-            .radius = 0.1,
-        },
-        {
-            .center = vec4(-0.5, 0.0, 0.5, 1.0),
-            .velocity = vec4(glm::ballRand(0.02), 0.0),
-            .color = vec4(1.0, 1.0, 1.0, 1.0),
-            .radius = 0.15,
-        },
-    };
+    std::vector<Sphere> spheres(100'000);
+    for (size_t i = 0; i < spheres.size(); ++i) {
+        spheres[i] = Sphere{
+            .center =
+                vec4(glm::linearRand(-3.0f, 3.0f), glm::linearRand(-3.0f, 3.0f),
+                     glm::linearRand(-3.0f, 3.0f), 1),
+            .velocity = glm::vec4(glm::ballRand(0.05f), 0.0f),
+            .color =
+                vec4(glm::linearRand(0.1f, 1.0f), glm::linearRand(0.1f, 1.0f),
+                     glm::linearRand(0.1f, 1.0f), 1.0f),
+            .radius = glm::linearRand(0.05f, 0.2f),
+        };
+    }
+    printf("%zu\n", spheres.size());
 
     GLuint ssbo;
     glGenBuffers(1, &ssbo);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(spheres), spheres,
-                 GL_DYNAMIC_DRAW);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, spheres.size() * sizeof(Sphere),
+                 &spheres[0], GL_DYNAMIC_DRAW);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, ssbo);
 
     auto viewUniform = glGetUniformLocation(shader_program, "view");
     auto projectionUniform = glGetUniformLocation(shader_program, "projection");
+    auto gravityUniform = glGetUniformLocation(compute_program, "gravity");
+    auto lowBoundUniform = glGetUniformLocation(compute_program, "low_bound");
+    auto highBoundUniform = glGetUniformLocation(compute_program, "high_bound");
 
-    auto camera = OrbitingCamera(vec3(0, 0, 0), 5, 0, 0);
+    auto camera = OrbitingCamera(vec3(0, -1, 0), 15, 0, 0);
+    vec4 gravity = vec4(0, -0.0008, 0, 0);
+    vec3 low_bound = vec3(-3, -3, -3);
+    vec3 high_bound = vec3(3, 3, 3);
+
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -156,13 +152,23 @@ int main(void) {
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
         ImGui::Begin("Settings");
+        ImGui::Text("FPS: %2.2f", ImGui::GetIO().Framerate);
+        ImGui::Separator();
         ImGui::SliderFloat("Camera yaw", &camera.yaw, 0, 360);
         ImGui::SliderFloat("Camera pitch", &camera.pitch, -89.999, 89.999);
-        ImGui::DragFloat("Camera distance", &camera.distance, 0.02, 1, 25);
+        ImGui::DragFloat("Camera distance", &camera.distance, 0.02, 1, 30);
+        ImGui::Separator();
+        ImGui::SliderFloat3("Gravity", glm::value_ptr(gravity), -0.01, 0.01);
+        ImGui::SliderFloat3("Box high bound", glm::value_ptr(high_bound), 0,
+                            10);
+        ImGui::SliderFloat3("Box low bound", glm::value_ptr(low_bound), -10, 0);
         ImGui::End();
         glUseProgram(compute_program);
+        glUniform4fv(gravityUniform, 1, glm::value_ptr(gravity));
+        glUniform3fv(lowBoundUniform, 1, glm::value_ptr(low_bound));
+        glUniform3fv(highBoundUniform, 1, glm::value_ptr(high_bound));
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, ssbo);
-        glDispatchCompute(4, 1, 1);
+        glDispatchCompute(spheres.size(), 1, 1);
         glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
         glUseProgram(shader_program);
         glUniformMatrix4fv(viewUniform, 1, GL_FALSE,
@@ -170,7 +176,7 @@ int main(void) {
         glUniformMatrix4fv(projectionUniform, 1, GL_FALSE,
                            glm::value_ptr(camera.projection()));
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, ssbo);
-        glDrawArraysInstanced(GL_POINTS, 0, 1, 4);
+        glDrawArraysInstanced(GL_POINTS, 0, 1, spheres.size());
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
         glfwSwapBuffers(window);
