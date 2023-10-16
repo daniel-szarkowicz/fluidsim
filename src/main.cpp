@@ -1,4 +1,7 @@
 #include "camera.hpp"
+#include "imgui.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_opengl3.h"
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <fstream>
@@ -64,6 +67,16 @@ int main(void) {
     glfwMakeContextCurrent(window);
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO();
+    (void)io;
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+    ImGui::StyleColorsDark();
+
+    ImGui_ImplGlfw_InitForOpenGL(window, true);
+    ImGui_ImplOpenGL3_Init("#version 430");
+
     glewInit();
     auto renderer = glGetString(GL_RENDERER);
     auto version = glGetString(GL_VERSION);
@@ -123,9 +136,17 @@ int main(void) {
 
     auto camera = OrbitingCamera(vec3(0, 0, 0), 2, 0, 0);
     while (!glfwWindowShouldClose(window)) {
+        glfwPollEvents();
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+        ImGui::Begin("Settings");
+        ImGui::SliderFloat("Camera yaw", &camera.yaw, 0, 360);
+        ImGui::SliderFloat("Camera pitch", &camera.pitch, -89.999, 89.999);
+        ImGui::DragFloat("Camera distance", &camera.distance, 0.02, 1, 25);
+        ImGui::End();
         glUseProgram(shader_program);
-        camera.yaw += 1;
         glUniformMatrix4fv(viewUniform, 1, GL_FALSE,
                            glm::value_ptr(camera.view()));
         glUniformMatrix4fv(projectionUniform, 1, GL_FALSE,
@@ -138,10 +159,16 @@ int main(void) {
                      GL_DYNAMIC_DRAW);
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, ssbo);
         glDrawArraysInstanced(GL_POINTS, 0, 1, 4);
+        ImGui::Render();
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
         glfwSwapBuffers(window);
-        glfwPollEvents();
     }
 
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
+
+    glfwDestroyWindow(window);
     glfwTerminate();
     return 0;
 }

@@ -31,8 +31,8 @@ OrbitingCamera::OrbitingCamera(glm::vec3 center, float distance, float pitch,
 glm::vec3 OrbitingCamera::position() {
     glm::mat4 rot = glm::mat4(1.0f);
     rot = glm::rotate(rot, glm::radians(yaw), glm::vec3(0.0f, 1.0f, 0.0f));
-    rot = glm::rotate(rot, glm::radians(pitch), glm::vec3(1.0f, 0.0f, 0.0f));
-    return rot * glm::vec4(distance, 0.0f, 0.0f, 1.0f);
+    rot = glm::rotate(rot, glm::radians(-pitch), glm::vec3(1.0f, 0.0f, 0.0f));
+    return rot * glm::vec4(0.0f, 0.0f, distance, 1.0f);
 }
 
 glm::vec3 OrbitingCamera::look_at() { return center; }
