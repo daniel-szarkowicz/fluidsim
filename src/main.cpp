@@ -1,3 +1,4 @@
+#define IMGUI_IMPL_OPENGL_LOADER_CUSTOM
 #include "camera.hpp"
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
@@ -103,6 +104,11 @@ int main(void) {
     glAttachShader(shader_program, fs);
     glLinkProgram(shader_program);
 
+    auto cs = load_shader("src/compute.glsl", GL_COMPUTE_SHADER);
+    auto compute_program = glCreateProgram();
+    glAttachShader(compute_program, cs);
+    glLinkProgram(compute_program);
+
     Sphere spheres[]{
         {
             .center = vec4(0.0, 0.5, 0.5, 1.0),
@@ -136,9 +142,6 @@ int main(void) {
     auto viewUniform = glGetUniformLocation(shader_program, "view");
     auto projectionUniform = glGetUniformLocation(shader_program, "projection");
 
-    auto rot_mat =
-        glm::rotate(glm::mat4(1.0f), glm::radians(1.0f), vec3(0, 0, 1));
-
     auto camera = OrbitingCamera(vec3(0, 0, 0), 2, 0, 0);
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
@@ -151,17 +154,15 @@ int main(void) {
         ImGui::SliderFloat("Camera pitch", &camera.pitch, -89.999, 89.999);
         ImGui::DragFloat("Camera distance", &camera.distance, 0.02, 1, 25);
         ImGui::End();
+        glUseProgram(compute_program);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, ssbo);
+        glDispatchCompute(4, 1, 1);
+        glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
         glUseProgram(shader_program);
         glUniformMatrix4fv(viewUniform, 1, GL_FALSE,
                            glm::value_ptr(camera.view()));
         glUniformMatrix4fv(projectionUniform, 1, GL_FALSE,
                            glm::value_ptr(camera.projection()));
-        glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
-        for (auto& s : spheres) {
-            s.center = rot_mat * s.center;
-        }
-        glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(spheres), spheres,
-                     GL_DYNAMIC_DRAW);
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, ssbo);
         glDrawArraysInstanced(GL_POINTS, 0, 1, 4);
         ImGui::Render();
