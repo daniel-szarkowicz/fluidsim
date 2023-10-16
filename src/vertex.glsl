@@ -1,9 +1,9 @@
 #version 430
 
-uniform mat4 view;
 
 struct Sphere {
     vec4 center;
+    vec4 velocity;
     vec4 color;
     float radius;
 };
@@ -11,6 +11,8 @@ struct Sphere {
 layout(std430, binding = 3) readonly buffer points {
     Sphere spheres[];
 };
+
+uniform mat4 view;
 
 out vec3 vColor;
 out float vRadius;

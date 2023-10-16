@@ -8,6 +8,7 @@
 #include <fstream>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/random.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <sstream>
 #include <stdio.h>
@@ -18,6 +19,7 @@ using glm::vec4;
 
 struct Sphere {
     vec4 center;
+    vec4 velocity;
     vec4 color;
     float radius;
     float _padding[3];
@@ -64,7 +66,7 @@ int main(void) {
         return 1;
     }
 
-    auto window = glfwCreateWindow(640, 480, "fluidsim", NULL, NULL);
+    auto window = glfwCreateWindow(1280, 720, "fluidsim", NULL, NULL);
     if (!window) {
         fprintf(stderr, "GLFW window error\n");
         glfwTerminate();
@@ -89,8 +91,8 @@ int main(void) {
     printf("Renderer: %s\n", renderer);
     printf("OpenGL version: %s\n", version);
 
-    // glEnable(GL_DEBUG_OUTPUT);
-    // glDebugMessageCallback(message_callback, 0);
+    glEnable(GL_DEBUG_OUTPUT);
+    glDebugMessageCallback(message_callback, 0);
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
 
@@ -112,21 +114,25 @@ int main(void) {
     Sphere spheres[]{
         {
             .center = vec4(0.0, 0.5, 0.5, 1.0),
+            .velocity = vec4(glm::ballRand(0.02), 0.0),
             .color = vec4(1.0, 0.0, 0.0, 1.0),
             .radius = 0.2,
         },
         {
             .center = vec4(0.5, 0.0, 0.5, 1.0),
+            .velocity = vec4(glm::ballRand(0.02), 0.0),
             .color = vec4(0.0, 1.0, 0.0, 1.0),
             .radius = 0.15,
         },
         {
             .center = vec4(0.0, -0.5, 0.5, 1.0),
+            .velocity = vec4(glm::ballRand(0.02), 0.0),
             .color = vec4(0.0, 0.0, 1.0, 1.0),
             .radius = 0.1,
         },
         {
             .center = vec4(-0.5, 0.0, 0.5, 1.0),
+            .velocity = vec4(glm::ballRand(0.02), 0.0),
             .color = vec4(1.0, 1.0, 1.0, 1.0),
             .radius = 0.15,
         },
@@ -142,7 +148,7 @@ int main(void) {
     auto viewUniform = glGetUniformLocation(shader_program, "view");
     auto projectionUniform = glGetUniformLocation(shader_program, "projection");
 
-    auto camera = OrbitingCamera(vec3(0, 0, 0), 2, 0, 0);
+    auto camera = OrbitingCamera(vec3(0, 0, 0), 5, 0, 0);
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
