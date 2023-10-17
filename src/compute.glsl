@@ -22,29 +22,39 @@ void main() {
     Sphere s = spheres[i];
     s.velocity += gravity;
     s.center += s.velocity;
+    bool collided = false;
     if (s.center.x > high_bound.x - s.radius) {
         s.center.x = high_bound.x - s.radius;
         s.velocity.x = -abs(s.velocity.x);
+        collided = true;
     }
     if (s.center.y > high_bound.y - s.radius) {
         s.center.y = high_bound.y - s.radius;
         s.velocity.y = -abs(s.velocity.y);
+        collided = true;
     }
     if (s.center.z > high_bound.z - s.radius) {
         s.center.z = high_bound.z - s.radius;
         s.velocity.z = -abs(s.velocity.z);
+        collided = true;
     }
     if (s.center.x < low_bound.x + s.radius) {
         s.center.x = low_bound.x + s.radius;
         s.velocity.x = +abs(s.velocity.x);
+        collided = true;
     }
     if (s.center.y < low_bound.y + s.radius) {
         s.center.y = low_bound.y + s.radius;
         s.velocity.y = +abs(s.velocity.y);
+        collided = true;
     }
     if (s.center.z < low_bound.z + s.radius) {
         s.center.z = low_bound.z + s.radius;
         s.velocity.z = +abs(s.velocity.z);
+        collided = true;
+    }
+    if (collided) {
+        s.velocity *= 0.95;
     }
     spheres[i] = s;
 }

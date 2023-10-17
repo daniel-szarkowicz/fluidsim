@@ -140,8 +140,8 @@ int main(void) {
     auto lowBoundUniform = glGetUniformLocation(compute_program, "low_bound");
     auto highBoundUniform = glGetUniformLocation(compute_program, "high_bound");
 
-    auto camera = OrbitingCamera(vec3(0, -1, 0), 15, 0, 0);
-    vec4 gravity = vec4(0, -0.0008, 0, 0);
+    auto camera = OrbitingCamera(vec3(0, 0, 0), 15, 0, 0);
+    vec4 gravity = vec4(0, -0.001, 0, 0);
     vec3 low_bound = vec3(-3, -3, -3);
     vec3 high_bound = vec3(3, 3, 3);
 
@@ -158,7 +158,7 @@ int main(void) {
         ImGui::SliderFloat("Camera pitch", &camera.pitch, -89.999, 89.999);
         ImGui::DragFloat("Camera distance", &camera.distance, 0.02, 1, 30);
         ImGui::Separator();
-        ImGui::SliderFloat3("Gravity", glm::value_ptr(gravity), -0.01, 0.01);
+        ImGui::SliderFloat3("Gravity", glm::value_ptr(gravity), -0.005, 0.005);
         ImGui::SliderFloat3("Box high bound", glm::value_ptr(high_bound), 0,
                             10);
         ImGui::SliderFloat3("Box low bound", glm::value_ptr(low_bound), -10, 0);
