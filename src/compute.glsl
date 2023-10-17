@@ -1,6 +1,6 @@
 #version 430
 
-layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+layout(local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
 
 struct Sphere {
     vec4 center;
@@ -20,12 +20,13 @@ layout(std430, binding = 4) writeonly buffer outputs {
 uniform vec4 gravity;
 uniform vec3 low_bound;
 uniform vec3 high_bound;
+uniform float dt;
 
 void main() {
     uint i = gl_GlobalInvocationID.x;
     Sphere s = spheres_in[i];
-    s.velocity += gravity;
-    s.center += s.velocity;
+    s.velocity += gravity * dt;
+    s.center += s.velocity * dt;
     bool collided = false;
     if (s.center.x > high_bound.x - s.radius) {
         s.center.x = high_bound.x - s.radius;

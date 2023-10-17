@@ -1,11 +1,10 @@
-#include <vector>
-#define IMGUI_IMPL_OPENGL_LOADER_CUSTOM
 #include "camera.hpp"
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
+#include <chrono>
 #include <fstream>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -14,6 +13,7 @@
 #include <sstream>
 #include <stdio.h>
 #include <string>
+#include <vector>
 
 using glm::vec3;
 using glm::vec4;
@@ -115,13 +115,14 @@ int main(void) {
     glAttachShader(compute_program, cs);
     glLinkProgram(compute_program);
 
-    std::vector<Sphere> spheres(100'000);
+    std::vector<Sphere> spheres(500'000);
     for (size_t i = 0; i < spheres.size(); ++i) {
         spheres[i] = Sphere{
             .center =
                 vec4(glm::linearRand(-3.0f, 3.0f), glm::linearRand(-3.0f, 3.0f),
                      glm::linearRand(-3.0f, 3.0f), 1),
-            .velocity = glm::vec4(glm::ballRand(0.05f), 0.0f),
+            .velocity = glm::vec4(glm::ballRand(4.0f), 0.0f) *
+                        glm::linearRand(0.5f, 1.0f),
             .color =
                 vec4(glm::linearRand(0.1f, 1.0f), glm::linearRand(0.1f, 1.0f),
                      glm::linearRand(0.1f, 1.0f), 1.0f),
@@ -148,15 +149,23 @@ int main(void) {
     auto gravityUniform = glGetUniformLocation(compute_program, "gravity");
     auto lowBoundUniform = glGetUniformLocation(compute_program, "low_bound");
     auto highBoundUniform = glGetUniformLocation(compute_program, "high_bound");
+    auto dtUniform = glGetUniformLocation(compute_program, "dt");
 
-    auto camera = OrbitingCamera(vec3(0, 0, 0), 15, 0, 0);
-    vec4 gravity = vec4(0, -0.001, 0, 0);
-    vec3 low_bound = vec3(-3, -3, -3);
-    vec3 high_bound = vec3(3, 3, 3);
+    auto camera = OrbitingCamera(vec3(0, 0, 0), 30, 0, 0);
+    vec4 gravity = vec4(0, -3, 0, 0);
+    vec3 low_bound = vec3(-15, -8, -15);
+    vec3 high_bound = vec3(15, 8, 15);
     uint8_t ssbo_flip = 0;
     bool paused = false;
+    auto prev_frame = std::chrono::steady_clock::now();
 
     while (!glfwWindowShouldClose(window)) {
+        auto current_frame = std::chrono::steady_clock::now();
+        float delta = std::chrono::duration_cast<std::chrono::milliseconds>(
+                          current_frame - prev_frame)
+                          .count() /
+                      1000.0f;
+        prev_frame = current_frame;
         glfwPollEvents();
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         ImGui_ImplOpenGL3_NewFrame();
@@ -166,14 +175,15 @@ int main(void) {
         ImGui::Text("FPS: %2.2f", ImGui::GetIO().Framerate);
         ImGui::Checkbox("Pause", &paused);
         ImGui::Separator();
-        ImGui::SliderFloat("Camera yaw", &camera.yaw, 0, 360);
-        ImGui::SliderFloat("Camera pitch", &camera.pitch, -89.999, 89.999);
-        ImGui::DragFloat("Camera distance", &camera.distance, 0.02, 1, 30);
+        ImGui::DragFloat("Camera yaw", &camera.yaw, 0.2, 0, 360);
+        ImGui::DragFloat("Camera pitch", &camera.pitch, 0.1, -89.999, 89.999);
+        ImGui::DragFloat("Camera distance", &camera.distance, 0.02, 1, 100);
         ImGui::Separator();
-        ImGui::SliderFloat3("Gravity", glm::value_ptr(gravity), -0.005, 0.005);
-        ImGui::SliderFloat3("Box high bound", glm::value_ptr(high_bound), 0,
-                            10);
-        ImGui::SliderFloat3("Box low bound", glm::value_ptr(low_bound), -10, 0);
+        ImGui::DragFloat3("Gravity", glm::value_ptr(gravity), 0.01, -10, 10);
+        ImGui::DragFloat3("Box high bound", glm::value_ptr(high_bound), 0.02, 0,
+                          30);
+        ImGui::DragFloat3("Box low bound", glm::value_ptr(low_bound), 0.02, -30,
+                          0);
         ImGui::End();
         if (!paused) {
             glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
@@ -182,9 +192,10 @@ int main(void) {
             glUniform4fv(gravityUniform, 1, glm::value_ptr(gravity));
             glUniform3fv(lowBoundUniform, 1, glm::value_ptr(low_bound));
             glUniform3fv(highBoundUniform, 1, glm::value_ptr(high_bound));
+            glUniform1f(dtUniform, delta);
             glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, ssbo[ssbo_flip]);
             glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, ssbo[1 - ssbo_flip]);
-            glDispatchCompute(spheres.size(), 1, 1);
+            glDispatchCompute(spheres.size()/32, 1, 1);
         }
         glUseProgram(shader_program);
         glUniformMatrix4fv(viewUniform, 1, GL_FALSE,
