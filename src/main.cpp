@@ -67,6 +67,9 @@ int main(void) {
         return 1;
     }
 
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     auto window = glfwCreateWindow(1280, 720, "fluidsim", NULL, NULL);
     if (!window) {
         fprintf(stderr, "GLFW window error\n");
@@ -127,6 +130,10 @@ int main(void) {
     }
     printf("%zu\n", spheres.size());
 
+    GLuint vao;
+    glCreateVertexArrays(1, &vao);
+    glBindVertexArray(vao);
+
     GLuint ssbo[2];
     glGenBuffers(2, ssbo);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo[0]);
@@ -168,8 +175,8 @@ int main(void) {
                             10);
         ImGui::SliderFloat3("Box low bound", glm::value_ptr(low_bound), -10, 0);
         ImGui::End();
-        glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
         if (!paused) {
+            glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
             ssbo_flip = 1 - ssbo_flip;
             glUseProgram(compute_program);
             glUniform4fv(gravityUniform, 1, glm::value_ptr(gravity));
