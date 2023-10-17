@@ -127,12 +127,14 @@ int main(void) {
     }
     printf("%zu\n", spheres.size());
 
-    GLuint ssbo;
-    glGenBuffers(1, &ssbo);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
+    GLuint ssbo[2];
+    glGenBuffers(2, ssbo);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo[0]);
     glBufferData(GL_SHADER_STORAGE_BUFFER, spheres.size() * sizeof(Sphere),
                  &spheres[0], GL_DYNAMIC_DRAW);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, ssbo);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo[1]);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, spheres.size() * sizeof(Sphere),
+                 &spheres[0], GL_DYNAMIC_DRAW);
 
     auto viewUniform = glGetUniformLocation(shader_program, "view");
     auto projectionUniform = glGetUniformLocation(shader_program, "projection");
@@ -144,6 +146,7 @@ int main(void) {
     vec4 gravity = vec4(0, -0.001, 0, 0);
     vec3 low_bound = vec3(-3, -3, -3);
     vec3 high_bound = vec3(3, 3, 3);
+    uint8_t ssbo_flip = 0;
 
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
@@ -163,23 +166,25 @@ int main(void) {
                             10);
         ImGui::SliderFloat3("Box low bound", glm::value_ptr(low_bound), -10, 0);
         ImGui::End();
+        glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
         glUseProgram(compute_program);
         glUniform4fv(gravityUniform, 1, glm::value_ptr(gravity));
         glUniform3fv(lowBoundUniform, 1, glm::value_ptr(low_bound));
         glUniform3fv(highBoundUniform, 1, glm::value_ptr(high_bound));
-        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, ssbo);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, ssbo[ssbo_flip]);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, ssbo[1-ssbo_flip]);
         glDispatchCompute(spheres.size(), 1, 1);
-        glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
         glUseProgram(shader_program);
         glUniformMatrix4fv(viewUniform, 1, GL_FALSE,
                            glm::value_ptr(camera.view()));
         glUniformMatrix4fv(projectionUniform, 1, GL_FALSE,
                            glm::value_ptr(camera.projection()));
-        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, ssbo);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, ssbo[ssbo_flip]);
         glDrawArraysInstanced(GL_POINTS, 0, 1, spheres.size());
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
         glfwSwapBuffers(window);
+        ssbo_flip = 1 - ssbo_flip;
     }
 
     ImGui_ImplOpenGL3_Shutdown();

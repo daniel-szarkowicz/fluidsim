@@ -9,8 +9,12 @@ struct Sphere {
     float radius;
 };
 
-layout(std430, binding = 3) buffer points {
-    Sphere spheres[];
+layout(std430, binding = 3) readonly buffer inputs {
+    Sphere spheres_in[];
+};
+
+layout(std430, binding = 4) writeonly buffer outputs {
+    Sphere spheres_out[];
 };
 
 uniform vec4 gravity;
@@ -19,7 +23,7 @@ uniform vec3 high_bound;
 
 void main() {
     uint i = gl_GlobalInvocationID.x;
-    Sphere s = spheres[i];
+    Sphere s = spheres_in[i];
     s.velocity += gravity;
     s.center += s.velocity;
     bool collided = false;
@@ -56,5 +60,5 @@ void main() {
     if (collided) {
         s.velocity *= 0.95;
     }
-    spheres[i] = s;
+    spheres_out[i] = s;
 }
