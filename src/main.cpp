@@ -147,6 +147,7 @@ int main(void) {
     vec3 low_bound = vec3(-3, -3, -3);
     vec3 high_bound = vec3(3, 3, 3);
     uint8_t ssbo_flip = 0;
+    bool paused = false;
 
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
@@ -156,6 +157,7 @@ int main(void) {
         ImGui::NewFrame();
         ImGui::Begin("Settings");
         ImGui::Text("FPS: %2.2f", ImGui::GetIO().Framerate);
+        ImGui::Checkbox("Pause", &paused);
         ImGui::Separator();
         ImGui::SliderFloat("Camera yaw", &camera.yaw, 0, 360);
         ImGui::SliderFloat("Camera pitch", &camera.pitch, -89.999, 89.999);
@@ -167,13 +169,16 @@ int main(void) {
         ImGui::SliderFloat3("Box low bound", glm::value_ptr(low_bound), -10, 0);
         ImGui::End();
         glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-        glUseProgram(compute_program);
-        glUniform4fv(gravityUniform, 1, glm::value_ptr(gravity));
-        glUniform3fv(lowBoundUniform, 1, glm::value_ptr(low_bound));
-        glUniform3fv(highBoundUniform, 1, glm::value_ptr(high_bound));
-        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, ssbo[ssbo_flip]);
-        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, ssbo[1-ssbo_flip]);
-        glDispatchCompute(spheres.size(), 1, 1);
+        if (!paused) {
+            ssbo_flip = 1 - ssbo_flip;
+            glUseProgram(compute_program);
+            glUniform4fv(gravityUniform, 1, glm::value_ptr(gravity));
+            glUniform3fv(lowBoundUniform, 1, glm::value_ptr(low_bound));
+            glUniform3fv(highBoundUniform, 1, glm::value_ptr(high_bound));
+            glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, ssbo[ssbo_flip]);
+            glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, ssbo[1 - ssbo_flip]);
+            glDispatchCompute(spheres.size(), 1, 1);
+        }
         glUseProgram(shader_program);
         glUniformMatrix4fv(viewUniform, 1, GL_FALSE,
                            glm::value_ptr(camera.view()));
@@ -184,7 +189,6 @@ int main(void) {
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
         glfwSwapBuffers(window);
-        ssbo_flip = 1 - ssbo_flip;
     }
 
     ImGui_ImplOpenGL3_Shutdown();
