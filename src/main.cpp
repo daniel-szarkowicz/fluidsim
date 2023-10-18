@@ -90,6 +90,11 @@ int main(void) {
                                .fragment_file("src/shader/sphere_fragment.glsl")
                                .build();
 
+    Shader box_shader = Shader::builder()
+                            .vertex_file("src/shader/box_vertex.glsl")
+                            .fragment_file("src/shader/box_fragment.glsl")
+                            .build();
+
     Shader compute_shader =
         Shader::builder().compute_file("src/shader/compute.glsl").build();
 
@@ -113,9 +118,26 @@ int main(void) {
         };
     }
 
-    GLuint vao;
-    glCreateVertexArrays(1, &vao);
-    glBindVertexArray(vao);
+    GLuint empty_vao;
+    glCreateVertexArrays(1, &empty_vao);
+
+    GLuint box_vao;
+    glCreateVertexArrays(1, &box_vao);
+    glBindVertexArray(box_vao);
+    GLuint box_vbo;
+    glGenBuffers(1, &box_vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, box_vbo);
+    vec3 points[] = {
+        vec3(-1, 1, -1),  vec3(-1, 1, 1),   vec3(-1, 1, -1),  vec3(1, 1, -1),
+        vec3(1, 1, 1),    vec3(-1, 1, 1),   vec3(1, 1, 1),    vec3(1, 1, -1),
+        vec3(-1, -1, -1), vec3(-1, -1, 1),  vec3(-1, -1, -1), vec3(1, -1, -1),
+        vec3(1, -1, 1),   vec3(-1, -1, 1),  vec3(1, -1, 1),   vec3(1, -1, -1),
+        vec3(-1, 1, -1),  vec3(-1, -1, -1), vec3(1, 1, -1),   vec3(1, -1, -1),
+        vec3(-1, 1, 1),   vec3(-1, -1, 1),  vec3(1, 1, 1),    vec3(1, -1, 1),
+    };
+    glBufferData(GL_ARRAY_BUFFER, sizeof(points), points, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
 
     GLuint ssbo[2];
     glGenBuffers(2, ssbo);
@@ -190,7 +212,16 @@ int main(void) {
         sphere_shader.uniform("view", camera.view());
         sphere_shader.uniform("projection", camera.projection());
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, ssbo[ssbo_flip]);
+        glBindVertexArray(empty_vao);
         glDrawArraysInstanced(GL_POINTS, 0, 1, spheres.size());
+
+        box_shader.use();
+        box_shader.uniform("view_projection", camera.view_projection());
+        box_shader.uniform("low_bound", low_bound);
+        box_shader.uniform("high_bound", high_bound);
+        glBindVertexArray(box_vao);
+        glBindBuffer(GL_ARRAY_BUFFER, box_vbo);
+        glDrawArrays(GL_LINES, 0, 24);
 
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
