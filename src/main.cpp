@@ -115,13 +115,13 @@ int main(void) {
     glAttachShader(compute_program, cs);
     glLinkProgram(compute_program);
 
-    std::vector<Sphere> spheres(12800);
+    std::vector<Sphere> spheres(10000);
     for (size_t i = 0; i < spheres.size(); ++i) {
         spheres[i] = Sphere{
             .center =
                 vec4(glm::linearRand(-3.0f, 3.0f), glm::linearRand(-3.0f, 3.0f),
                      glm::linearRand(-3.0f, 3.0f), 1),
-            .velocity = glm::vec4(glm::ballRand(4.0f), 0.0f) *
+            .velocity = glm::vec4(glm::ballRand(20.0f), 0.0f) *
                         glm::linearRand(0.5f, 1.0f),
             // .center =
             //     vec4(glm::linearRand(-3.0f, 3.0f),
@@ -157,6 +157,8 @@ int main(void) {
     auto dtUniform = glGetUniformLocation(compute_program, "dt");
     auto collisionMultiplierUniform =
         glGetUniformLocation(compute_program, "collision_multiplier");
+    auto objectCountUniform =
+        glGetUniformLocation(compute_program, "object_count");
 
     auto camera = OrbitingCamera(vec3(0, 0, 0), 30, 0, 0);
     vec4 gravity = vec4(0, -8, 0, 0);
@@ -199,14 +201,20 @@ int main(void) {
             glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
             ssbo_flip = 1 - ssbo_flip;
             glUseProgram(compute_program);
+            GLint compute_work_groups[3];
+            glGetProgramiv(compute_program, GL_COMPUTE_WORK_GROUP_SIZE,
+                           compute_work_groups);
             glUniform4fv(gravityUniform, 1, glm::value_ptr(gravity));
             glUniform3fv(lowBoundUniform, 1, glm::value_ptr(low_bound));
             glUniform3fv(highBoundUniform, 1, glm::value_ptr(high_bound));
             glUniform1f(dtUniform, delta);
             glUniform1f(collisionMultiplierUniform, collision_multiplier);
+            glUniform1ui(objectCountUniform, spheres.size());
             glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, ssbo[ssbo_flip]);
             glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, ssbo[1 - ssbo_flip]);
-            glDispatchCompute(spheres.size() / 32, 1, 1);
+            glDispatchCompute((spheres.size() + compute_work_groups[0] - 1) /
+                                  compute_work_groups[0],
+                              1, 1);
         }
         glUseProgram(shader_program);
         glUniformMatrix4fv(viewUniform, 1, GL_FALSE,
