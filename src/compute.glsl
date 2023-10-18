@@ -21,13 +21,28 @@ uniform vec4 gravity;
 uniform vec3 low_bound;
 uniform vec3 high_bound;
 uniform float dt;
+uniform float collision_multiplier = 1;
 
 void main() {
     uint i = gl_GlobalInvocationID.x;
     Sphere s = spheres_in[i];
-    s.velocity += gravity * dt;
-    s.center += s.velocity * dt;
     bool collided = false;
+    for (int j = 0; j < 12800; ++j) {
+        if (i != j) {
+            Sphere other = spheres_in[j];
+            vec4 dir = s.center - other.center;
+            if (length(dir) < s.radius + other.radius) {
+                dir = normalize(dir);
+                s.velocity = s.velocity - dot(s.velocity - other.velocity, dir)
+                    / dot(dir, dir) * dir;
+                vec4 coll_center = vec4(
+                    (s.center.xyz * other.radius + other.center.xyz * s.radius)
+                    / (s.radius + other.radius), 1);
+                s.center = coll_center + dir * (s.radius);
+                collided = true;
+            }
+        }
+    }
     if (s.center.x > high_bound.x - s.radius) {
         s.center.x = high_bound.x - s.radius;
         s.velocity.x = -abs(s.velocity.x);
@@ -59,7 +74,9 @@ void main() {
         collided = true;
     }
     if (collided) {
-        s.velocity *= 0.95;
+        s.velocity *= collision_multiplier;
     }
+    s.velocity += gravity * dt;
+    s.center += s.velocity * dt;
     spheres_out[i] = s;
 }

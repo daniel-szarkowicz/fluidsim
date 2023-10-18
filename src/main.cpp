@@ -115,7 +115,7 @@ int main(void) {
     glAttachShader(compute_program, cs);
     glLinkProgram(compute_program);
 
-    std::vector<Sphere> spheres(500'000);
+    std::vector<Sphere> spheres(12800);
     for (size_t i = 0; i < spheres.size(); ++i) {
         spheres[i] = Sphere{
             .center =
@@ -123,6 +123,11 @@ int main(void) {
                      glm::linearRand(-3.0f, 3.0f), 1),
             .velocity = glm::vec4(glm::ballRand(4.0f), 0.0f) *
                         glm::linearRand(0.5f, 1.0f),
+            // .center =
+            //     vec4(glm::linearRand(-3.0f, 3.0f),
+            //     glm::linearRand(-3.0f, 3.0f), 0, 1),
+            // .velocity = glm::vec4(glm::circularRand(4.0f), 0, 0.0f) *
+            //             glm::linearRand(0.5f, 1.0f),
             .color =
                 vec4(glm::linearRand(0.1f, 1.0f), glm::linearRand(0.1f, 1.0f),
                      glm::linearRand(0.1f, 1.0f), 1.0f),
@@ -150,11 +155,14 @@ int main(void) {
     auto lowBoundUniform = glGetUniformLocation(compute_program, "low_bound");
     auto highBoundUniform = glGetUniformLocation(compute_program, "high_bound");
     auto dtUniform = glGetUniformLocation(compute_program, "dt");
+    auto collisionMultiplierUniform =
+        glGetUniformLocation(compute_program, "collision_multiplier");
 
     auto camera = OrbitingCamera(vec3(0, 0, 0), 30, 0, 0);
-    vec4 gravity = vec4(0, -3, 0, 0);
+    vec4 gravity = vec4(0, -8, 0, 0);
     vec3 low_bound = vec3(-15, -8, -15);
     vec3 high_bound = vec3(15, 8, 15);
+    float collision_multiplier = 0.95;
     uint8_t ssbo_flip = 0;
     bool paused = false;
     auto prev_frame = std::chrono::steady_clock::now();
@@ -184,6 +192,8 @@ int main(void) {
                           30);
         ImGui::DragFloat3("Box low bound", glm::value_ptr(low_bound), 0.02, -30,
                           0);
+        ImGui::DragFloat("Collision multiplier", &collision_multiplier, 0.001,
+                         0, 1);
         ImGui::End();
         if (!paused) {
             glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
@@ -193,9 +203,10 @@ int main(void) {
             glUniform3fv(lowBoundUniform, 1, glm::value_ptr(low_bound));
             glUniform3fv(highBoundUniform, 1, glm::value_ptr(high_bound));
             glUniform1f(dtUniform, delta);
+            glUniform1f(collisionMultiplierUniform, collision_multiplier);
             glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, ssbo[ssbo_flip]);
             glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, ssbo[1 - ssbo_flip]);
-            glDispatchCompute(spheres.size()/32, 1, 1);
+            glDispatchCompute(spheres.size() / 32, 1, 1);
         }
         glUseProgram(shader_program);
         glUniformMatrix4fv(viewUniform, 1, GL_FALSE,
