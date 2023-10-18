@@ -2,6 +2,7 @@
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
+#include "shader.hpp"
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <chrono>
@@ -37,23 +38,6 @@ void GLAPIENTRY message_callback(GLenum source, GLenum type, GLuint id,
             "GL CALLBACK: %s type = 0x%x, severity = 0x%x, message = %s\n",
             (type == GL_DEBUG_TYPE_ERROR ? "** GL ERROR **" : ""), type,
             severity, message);
-}
-
-GLuint load_shader(const char* filename, GLenum type) {
-    std::ifstream file(filename);
-    if (!file.is_open()) {
-        fprintf(stderr, "ERROR: Could not open shader `%s`\n", filename);
-        return 0;
-    }
-    std::ostringstream ss;
-    ss << file.rdbuf();
-    std::string s(ss.str());
-    auto source = s.c_str();
-
-    auto shader = glCreateShader(type);
-    glShaderSource(shader, 1, &source, NULL);
-    glCompileShader(shader);
-    return shader;
 }
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
@@ -100,20 +84,14 @@ int main(void) {
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
 
-    auto vs = load_shader("src/shader/sphere_vertex.glsl", GL_VERTEX_SHADER);
-    auto gs = load_shader("src/shader/sphere_geometry.glsl", GL_GEOMETRY_SHADER);
-    auto fs = load_shader("src/shader/sphere_fragment.glsl", GL_FRAGMENT_SHADER);
+    Shader sphere_shader = Shader::builder()
+                               .vertex_file("src/shader/sphere_vertex.glsl")
+                               .geometry_file("src/shader/sphere_geometry.glsl")
+                               .fragment_file("src/shader/sphere_fragment.glsl")
+                               .build();
 
-    auto shader_program = glCreateProgram();
-    glAttachShader(shader_program, vs);
-    glAttachShader(shader_program, gs);
-    glAttachShader(shader_program, fs);
-    glLinkProgram(shader_program);
-
-    auto cs = load_shader("src/shader/compute.glsl", GL_COMPUTE_SHADER);
-    auto compute_program = glCreateProgram();
-    glAttachShader(compute_program, cs);
-    glLinkProgram(compute_program);
+    Shader compute_shader =
+        Shader::builder().compute_file("src/shader/compute.glsl").build();
 
     std::vector<Sphere> spheres(10000);
     for (size_t i = 0; i < spheres.size(); ++i) {
@@ -134,7 +112,6 @@ int main(void) {
             .radius = glm::linearRand(0.05f, 0.2f),
         };
     }
-    printf("%zu\n", spheres.size());
 
     GLuint vao;
     glCreateVertexArrays(1, &vao);
@@ -148,17 +125,6 @@ int main(void) {
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo[1]);
     glBufferData(GL_SHADER_STORAGE_BUFFER, spheres.size() * sizeof(Sphere),
                  &spheres[0], GL_DYNAMIC_DRAW);
-
-    auto viewUniform = glGetUniformLocation(shader_program, "view");
-    auto projectionUniform = glGetUniformLocation(shader_program, "projection");
-    auto gravityUniform = glGetUniformLocation(compute_program, "gravity");
-    auto lowBoundUniform = glGetUniformLocation(compute_program, "low_bound");
-    auto highBoundUniform = glGetUniformLocation(compute_program, "high_bound");
-    auto dtUniform = glGetUniformLocation(compute_program, "dt");
-    auto collisionMultiplierUniform =
-        glGetUniformLocation(compute_program, "collision_multiplier");
-    auto objectCountUniform =
-        glGetUniformLocation(compute_program, "object_count");
 
     auto camera = OrbitingCamera(vec3(0, 0, 0), 30, 0, 0);
     vec4 gravity = vec4(0, -8, 0, 0);
@@ -197,32 +163,35 @@ int main(void) {
         ImGui::DragFloat("Collision multiplier", &collision_multiplier, 0.001,
                          0, 1);
         ImGui::End();
+
         if (!paused) {
             glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
             ssbo_flip = 1 - ssbo_flip;
-            glUseProgram(compute_program);
+            compute_shader.use();
             GLint compute_work_groups[3];
-            glGetProgramiv(compute_program, GL_COMPUTE_WORK_GROUP_SIZE,
-                           compute_work_groups);
-            glUniform4fv(gravityUniform, 1, glm::value_ptr(gravity));
-            glUniform3fv(lowBoundUniform, 1, glm::value_ptr(low_bound));
-            glUniform3fv(highBoundUniform, 1, glm::value_ptr(high_bound));
-            glUniform1f(dtUniform, delta);
-            glUniform1f(collisionMultiplierUniform, collision_multiplier);
-            glUniform1ui(objectCountUniform, spheres.size());
+            glGetProgramiv(compute_shader.program_id,
+                           GL_COMPUTE_WORK_GROUP_SIZE, compute_work_groups);
+            compute_shader.uniform("gravity", gravity);
+            compute_shader.uniform("low_bound", low_bound);
+            compute_shader.uniform("high_bound", high_bound);
+            compute_shader.uniform("dt", delta);
+            compute_shader.uniform("collision_multiplier",
+                                   collision_multiplier);
+            compute_shader.uniform("object_count", (GLuint)spheres.size());
+
             glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, ssbo[ssbo_flip]);
             glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, ssbo[1 - ssbo_flip]);
             glDispatchCompute((spheres.size() + compute_work_groups[0] - 1) /
                                   compute_work_groups[0],
                               1, 1);
         }
-        glUseProgram(shader_program);
-        glUniformMatrix4fv(viewUniform, 1, GL_FALSE,
-                           glm::value_ptr(camera.view()));
-        glUniformMatrix4fv(projectionUniform, 1, GL_FALSE,
-                           glm::value_ptr(camera.projection()));
+
+        sphere_shader.use();
+        sphere_shader.uniform("view", camera.view());
+        sphere_shader.uniform("projection", camera.projection());
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, ssbo[ssbo_flip]);
         glDrawArraysInstanced(GL_POINTS, 0, 1, spheres.size());
+
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
         glfwSwapBuffers(window);
