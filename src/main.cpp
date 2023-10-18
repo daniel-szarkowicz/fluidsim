@@ -100,9 +100,9 @@ int main(void) {
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
 
-    auto vs = load_shader("src/vertex.glsl", GL_VERTEX_SHADER);
-    auto gs = load_shader("src/geometry.glsl", GL_GEOMETRY_SHADER);
-    auto fs = load_shader("src/fragment.glsl", GL_FRAGMENT_SHADER);
+    auto vs = load_shader("src/shader/sphere_vertex.glsl", GL_VERTEX_SHADER);
+    auto gs = load_shader("src/shader/sphere_geometry.glsl", GL_GEOMETRY_SHADER);
+    auto fs = load_shader("src/shader/sphere_fragment.glsl", GL_FRAGMENT_SHADER);
 
     auto shader_program = glCreateProgram();
     glAttachShader(shader_program, vs);
@@ -110,7 +110,7 @@ int main(void) {
     glAttachShader(shader_program, fs);
     glLinkProgram(shader_program);
 
-    auto cs = load_shader("src/compute.glsl", GL_COMPUTE_SHADER);
+    auto cs = load_shader("src/shader/compute.glsl", GL_COMPUTE_SHADER);
     auto compute_program = glCreateProgram();
     glAttachShader(compute_program, cs);
     glLinkProgram(compute_program);
