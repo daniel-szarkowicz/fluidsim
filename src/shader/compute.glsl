@@ -7,6 +7,7 @@ struct Sphere {
     vec4 velocity;
     vec4 color;
     float radius;
+    uint cell_hash;
 };
 
 layout(std430, binding = 3) readonly buffer inputs {
@@ -23,6 +24,25 @@ uniform vec3 high_bound;
 uniform float dt;
 uniform float collision_multiplier;
 uniform uint object_count;
+
+uint hash(uint x) {
+    x ^= x >> 17;
+    x *= 0xed5ad4bbU;
+    x ^= x >> 11;
+    x *= 0xac4c1b51U;
+    x ^= x >> 15;
+    x *= 0x31848babU;
+    x ^= x >> 14;
+    return x;
+}
+
+uint cell_hash(vec4 position) {
+    vec4 cell_pos = floor(position / 1.0);
+    uint cell_hash = hash(floatBitsToUint(cell_pos.x));
+    cell_hash = hash(cell_hash + floatBitsToUint(cell_pos.y));
+    cell_hash = hash(cell_hash + floatBitsToUint(cell_pos.z));
+    return cell_hash;
+}
 
 void main() {
     uint i = gl_GlobalInvocationID.x;
@@ -82,5 +102,6 @@ void main() {
     if (collided) {
         s.velocity *= collision_multiplier;
     }
+    s.cell_hash = cell_hash(s.center);
     spheres_out[i] = s;
 }

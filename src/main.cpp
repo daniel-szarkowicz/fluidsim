@@ -20,12 +20,33 @@ using glm::vec3;
 using glm::vec4;
 
 struct Sphere {
-    vec4 center;
-    vec4 velocity;
-    vec4 color;
-    float radius;
-    float _padding[3];
+    vec4 center;         // 128 bits
+    vec4 velocity;       // 128 bits
+    vec4 color;          // 128 bits
+    GLfloat radius;      // 32 bits
+    GLuint cell_hash;    // 32 bits
+    GLubyte _padding[8]; // 64 bits
 };
+
+// https://www.shadertoy.com/view/WttXWX
+GLuint hash(GLuint x) {
+    x ^= x >> 17;
+    x *= 0xed5ad4bbU;
+    x ^= x >> 11;
+    x *= 0xac4c1b51U;
+    x ^= x >> 15;
+    x *= 0x31848babU;
+    x ^= x >> 14;
+    return x;
+}
+
+GLuint cell_hash(vec4 position) {
+    vec4 cell_pos = glm::floor(position / 1.0f);
+    GLuint cell_hash = hash(glm::floatBitsToUint(cell_pos.x));
+    cell_hash = hash(cell_hash + glm::floatBitsToUint(cell_pos.y));
+    cell_hash = hash(cell_hash + glm::floatBitsToUint(cell_pos.z));
+    return cell_hash;
+}
 
 void GLAPIENTRY message_callback(GLenum source, GLenum type, GLuint id,
                                  GLenum severity, GLsizei length,
@@ -98,12 +119,13 @@ int main(void) {
     Shader compute_shader =
         Shader::builder().compute_file("src/shader/compute.glsl").build();
 
+    // TODO: move init to a compute shader
     std::vector<Sphere> spheres(10000);
     for (size_t i = 0; i < spheres.size(); ++i) {
         spheres[i] = Sphere{
             .center =
-                vec4(glm::linearRand(-3.0f, 3.0f), glm::linearRand(-3.0f, 3.0f),
-                     glm::linearRand(-3.0f, 3.0f), 1),
+                vec4(glm::linearRand(-5.0f, 5.0f), glm::linearRand(-5.0f, 5.0f),
+                     glm::linearRand(-5.0f, 5.0f), 1),
             .velocity = glm::vec4(glm::ballRand(20.0f), 0.0f) *
                         glm::linearRand(0.5f, 1.0f),
             // .center =
@@ -116,6 +138,7 @@ int main(void) {
                      glm::linearRand(0.1f, 1.0f), 1.0f),
             .radius = glm::linearRand(0.05f, 0.2f),
         };
+        spheres[i].cell_hash = cell_hash(spheres[i].center);
     }
 
     GLuint empty_vao;
