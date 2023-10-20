@@ -25,7 +25,8 @@ struct Sphere {
     vec4 color;          // 128 bits
     GLfloat radius;      // 32 bits
     GLuint cell_hash;    // 32 bits
-    GLubyte _padding[8]; // 64 bits
+    GLuint obj_id;       // 32 bits
+    GLubyte _padding[4]; // 32 bits
 };
 
 // https://www.shadertoy.com/view/WttXWX
@@ -119,6 +120,10 @@ int main(void) {
     Shader compute_shader =
         Shader::builder().compute_file("src/shader/compute.glsl").build();
 
+    printf("bitonic\n");
+    Shader bitonic_sort_shader =
+        Shader::builder().compute_file("src/shader/bitonic.glsl").build();
+
     // TODO: move init to a compute shader
     std::vector<Sphere> spheres(10000);
     for (size_t i = 0; i < spheres.size(); ++i) {
@@ -139,7 +144,10 @@ int main(void) {
             .radius = glm::linearRand(0.05f, 0.2f),
         };
         spheres[i].cell_hash = cell_hash(spheres[i].center);
+        spheres[i].obj_id = i;
     }
+    spheres[0].radius = 0.25;
+    spheres[1].radius = 0.01;
 
     GLuint empty_vao;
     glCreateVertexArrays(1, &empty_vao);
@@ -210,10 +218,22 @@ int main(void) {
         ImGui::End();
 
         if (!paused) {
-            glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+            paused = true;
             ssbo_flip = 1 - ssbo_flip;
-            compute_shader.use();
             GLint compute_work_groups[3];
+
+            glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+            bitonic_sort_shader.use();
+            glGetProgramiv(bitonic_sort_shader.program_id,
+                           GL_COMPUTE_WORK_GROUP_SIZE, compute_work_groups);
+            bitonic_sort_shader.uniform("object_count", (GLuint)spheres.size());
+            glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, ssbo[ssbo_flip]);
+            glDispatchCompute((spheres.size() + compute_work_groups[0] - 1) /
+                                  compute_work_groups[0],
+                              1, 1);
+
+            glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+            compute_shader.use();
             glGetProgramiv(compute_shader.program_id,
                            GL_COMPUTE_WORK_GROUP_SIZE, compute_work_groups);
             compute_shader.uniform("gravity", gravity);

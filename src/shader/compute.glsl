@@ -8,6 +8,7 @@ struct Sphere {
     vec4 color;
     float radius;
     uint cell_hash;
+    uint obj_id;
 };
 
 layout(std430, binding = 3) readonly buffer inputs {
@@ -52,7 +53,7 @@ void main() {
     Sphere s = spheres_in[i];
     bool collided = false;
     for (uint j = 0; j < object_count; ++j) {
-        if (i != j) {
+        if (s.obj_id != spheres_in[j].obj_id) {
             Sphere other = spheres_in[j];
             vec4 dir = s.center - other.center;
             if (length(dir) < s.radius + other.radius) {
