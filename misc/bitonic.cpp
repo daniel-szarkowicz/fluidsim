@@ -4,39 +4,53 @@
 #include <stdio.h>
 #include <vector>
 
+void compare_and_swap(int* arr, int i, int j, int n) {
+    if (i < n && j < n) {
+        if (arr[i] > arr[j]) {
+            int tmp = arr[i];
+            arr[i] = arr[j];
+            arr[j] = tmp;
+        }
+    }
+    /* parallel on GPU:
+     * memoryBarrier();
+     * barrier();
+     */
+}
+
 void bitonic_merge(int* arr, int start, int end, int n) {
+    // start = j = block_start
+    // end = j + i = block_end
+    // end - start = i = block_size
     if (end - start <= 1) {
         return;
     }
     int size = end - start;
-    // for (int i = start; i < (start + end) / 2; ++i) {
-    //     if (i < n && i + size / 2 < n) {
-    //         if (arr[i] > arr[i + (end - start) / 2]) {
-    //             int tmp = arr[i];
-    //             arr[i] = arr[i + (end - start) / 2];
-    //             arr[i + (end - start) / 2] = tmp;
-    //         }
-    //     }
-    // }
-    // bitonic_merge(arr, start, (start + end) / 2, n);
-    // bitonic_merge(arr, (start + end) / 2, end, n);
-    // printf("size = %d\n", size);
     for (int a = size / 2; a > 1; a /= 2) {
+        /* parallel on GPU:
+         * i / 2 GPU cores are here
+         * // a = sub_block_size
+         */
         // printf("  a = %d\n", a);
-        for (int b = 0; b < size / a; ++b) {
+        for (int b = 0; b < size; b += a) {
+            /* parallel on GPU:
+             * a / 2 GPU cores should be here
+             * // b = sub_block_start_offset =
+             * // = sub_block_index_offset * sub_block_size
+             * b = (offset_in_block / (a / 2)) * a
+             */
             // printf("    b = %d\n", b);
-            for (int c = b * a; c < b * a + a / 2; ++c) {
-                int d = c + start;
+            for (int c = 0; c < a / 2; ++c) {
+                /* parallel on GPU:
+                 * 1 GPU core should be here
+                 * // c = offset_in_sub_block
+                 * c = offset_in_block % (a / 2)
+                 */
+                int d = b + c + start;
                 // printf("      c = %d\n", d);
-                int e = d + a / 2;
+                int e = b + c + start + a / 2;
                 // printf("      d = %d\n", e);
-                if (d < n && e < n) {
-                    if (arr[d] > arr[e]) {
-                        int tmp = arr[d];
-                        arr[d] = arr[e];
-                        arr[e] = tmp;
-                    }
-                }
+                compare_and_swap(arr, d, e, n);
             }
         }
     }
@@ -46,34 +60,30 @@ void bitonic_sort(int* arr, int start, int end, int n) {
     if (end - start <= 1) {
         return;
     }
-    // bitonic_sort(arr, start, (start + end) / 2, n);
-    // bitonic_sort(arr, (start + end) / 2, end, n);
-    // for (int i = 0; i < (end - start) / 2; ++i) {
-    //     if (start + i < n && end - 1 - i < n) {
-    //         if (arr[start + i] > arr[end - 1 - i]) {
-    //             int tmp = arr[start + i];
-    //             arr[start + i] = arr[end - 1 - i];
-    //             arr[end - 1 - i] = tmp;
-    //         }
-    //     }
-    // }
     for (int i = 2; i <= (end - start); i *= 2) {
+        /* parallel on GPU:
+         * // i = block_size
+         */
         // printf("i = %d\n", i);
         for (int j = 0; j < (end - start); j += i) {
+            /* parallel on GPU:
+             * i / 2 GPU cores should be here
+             * // j = block_start = block_index * block_size
+             * j = ((gl_GlobalInvocationID.x / (i / 2)) * i
+             */
             // printf("  j = %d\n", j);
             // első merge
-            for (int k = 0; k < i/2; ++k) {
+            for (int k = 0; k < i / 2; ++k) {
+                /* parallel on GPU:
+                 * 1 GPU core should be here
+                 * // k = offset_in_block
+                 * k = (gl_GlobalInvacationID.x) % (i/2)
+                 */
                 int l = j + k;
                 int m = j + i - 1 - k;
                 // printf("    l = %d\n", l);
                 // printf("    m = %d\n", m);
-                if (l < n && m < n) {
-                    if (arr[l] > arr[m]) {
-                        int tmp = arr[l];
-                        arr[l] = arr[m];
-                        arr[m] = tmp;
-                    }
-                }
+                compare_and_swap(arr, l, m, n);
             }
             // további merge
             bitonic_merge(arr, j, j + i, n);
