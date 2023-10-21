@@ -120,9 +120,12 @@ int main(void) {
     Shader compute_shader =
         Shader::builder().compute_file("src/shader/compute.glsl").build();
 
-    printf("bitonic\n");
-    Shader bitonic_sort_shader =
-        Shader::builder().compute_file("src/shader/bitonic.glsl").build();
+    Shader bitonic_merge1 = Shader::builder()
+                                .compute_file("src/shader/bitonic_merge1.glsl")
+                                .build();
+    Shader bitonic_merge2 = Shader::builder()
+                                .compute_file("src/shader/bitonic_merge2.glsl")
+                                .build();
 
     // TODO: move init to a compute shader
     std::vector<Sphere> spheres(10000);
@@ -221,16 +224,30 @@ int main(void) {
             paused = true;
             ssbo_flip = 1 - ssbo_flip;
             GLint compute_work_groups[3];
-
-            glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-            bitonic_sort_shader.use();
-            glGetProgramiv(bitonic_sort_shader.program_id,
+            glGetProgramiv(bitonic_merge1.program_id,
                            GL_COMPUTE_WORK_GROUP_SIZE, compute_work_groups);
-            bitonic_sort_shader.uniform("object_count", (GLuint)spheres.size());
+
             glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, ssbo[ssbo_flip]);
-            glDispatchCompute((spheres.size() + compute_work_groups[0] - 1) /
-                                  compute_work_groups[0],
-                              1, 1);
+            GLuint objects = spheres.size();
+            for (GLuint block = 2; block < objects * 2; block *= 2) {
+                bitonic_merge1.use();
+                bitonic_merge1.uniform("block", block);
+                bitonic_merge1.uniform("object_count", objects);
+                glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+                glDispatchCompute((objects + compute_work_groups[0] * 2 - 1) /
+                                      (compute_work_groups[0] * 2),
+                                  1, 1);
+                for (GLuint sub = block / 2; sub > 1; sub /= 2) {
+                    bitonic_merge2.use();
+                    bitonic_merge2.uniform("block", sub);
+                    bitonic_merge2.uniform("object_count", objects);
+                    glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+                    glDispatchCompute(
+                        (objects + compute_work_groups[0] * 2 - 1) /
+                            (compute_work_groups[0] * 2),
+                        1, 1);
+                }
+            }
 
             glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
             compute_shader.use();
