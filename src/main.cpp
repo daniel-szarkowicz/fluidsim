@@ -182,7 +182,7 @@ int main(void) {
     glBufferData(GL_SHADER_STORAGE_BUFFER, spheres.size() * sizeof(Sphere),
                  &spheres[0], GL_DYNAMIC_DRAW);
 
-    auto camera = OrbitingCamera(vec3(0, 0, 0), 30, 0, 0);
+    auto camera = OrbitingCamera(vec3(0, 0, 0), 90, 89.999, 0);
     vec4 gravity = vec4(0, -8, 0, 0);
     vec3 low_bound = vec3(-15, -8, -15);
     vec3 high_bound = vec3(15, 8, 15);
@@ -221,7 +221,6 @@ int main(void) {
         ImGui::End();
 
         if (!paused) {
-            paused = true;
             ssbo_flip = 1 - ssbo_flip;
             GLint compute_work_groups[3];
             glGetProgramiv(bitonic_merge1.program_id,

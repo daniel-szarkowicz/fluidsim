@@ -22,12 +22,12 @@ out float vRadius;
 void main() {
     // gl_Position = view * spheres[gl_InstanceID].center;
     uint hash = spheres[gl_InstanceID].cell_hash;
-    // vColor.x = float(hash & 7) / 7.0;
-    // vColor.y = float((hash & (3 << 3)) >> 3) / 3.0;
-    // vColor.z = float((hash & (7 << 5)) >> 5) / 7.0;
+    vColor.x = float(hash & 7) / 7.0;
+    vColor.y = float((hash & (3 << 3)) >> 3) / 3.0;
+    vColor.z = float((hash & (7 << 5)) >> 5) / 7.0;
     // vColor = spheres[gl_InstanceID].color.xyz;
-    vColor = vec3(1, 1, 1) * (float(gl_InstanceID) / 10000);
-    vColor.x = 1;
+    // vColor = vec3(1, 1, 1) * (float(gl_InstanceID) / 10000);
+    // vColor.x = 1;
     gl_Position.x = float(gl_InstanceID % 100) - 50;
     gl_Position.y = 0;
     gl_Position.z = float(gl_InstanceID / 100) - 50;
