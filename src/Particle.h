@@ -22,11 +22,8 @@ struct Sphere {
 	glm::vec4 center;         // 128 bits
 	glm::vec4 velocity;       // 128 bits
 	glm::vec4 color;          // 128 bits
-	GLfloat density;
-	GLfloat mass;
-	GLfloat pressure;
+	GLfloat density;	 // 32 bits
+	GLfloat mass;        // 32 bits
+	GLfloat pressure;    // 32 bits
 	GLfloat radius;      // 32 bits
-	GLuint cell_hash;    // 32 bits
-	GLuint obj_id;       // 32 bits
-	GLubyte _padding[4]; // 32 bits
 };

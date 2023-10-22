@@ -5,6 +5,9 @@ struct Sphere {
     vec4 center;
     vec4 velocity;
     vec4 color;
+	float density;
+	float mass;
+	float pressure;
     float radius;
 };
 

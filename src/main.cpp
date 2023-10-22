@@ -15,17 +15,12 @@
 #include <stdio.h>
 #include <string>
 #include <vector>
+#include "Particle.h"
+#include "SPH.h"
+#include "SpatialGrid3.h"
 
 using glm::vec3;
 using glm::vec4;
-
-struct Sphere {
-    vec4 center;
-    vec4 velocity;
-    vec4 color;
-    float radius;
-    float _padding[3];
-};
 
 void GLAPIENTRY message_callback(GLenum source, GLenum type, GLuint id,
                                  GLenum severity, GLsizei length,
