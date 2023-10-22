@@ -113,6 +113,10 @@ int main(void) {
         };
     }
 
+    /*
+     * Valahol itt kéne létrehozni a SpatialGrid-et és belerakni a gömböket
+     */
+
     GLuint empty_vao;
     glCreateVertexArrays(1, &empty_vao);
 
@@ -134,6 +138,10 @@ int main(void) {
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
 
+    /*
+     * Lehet, hogy elég lesz egy ssbo az SPH-hoz. Ekkor a másikat kitörölheted,
+     * vagy igazából itt is hagyhatod, max nem használod.
+     */
     GLuint ssbo[2];
     glGenBuffers(2, ssbo);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo[0]);
@@ -148,6 +156,10 @@ int main(void) {
     vec3 low_bound = vec3(-15, -8, -15);
     vec3 high_bound = vec3(15, 8, 15);
     float collision_multiplier = 0.95;
+    /*
+     * Ha csak egy ssbo-t használsz, akkor figyelj oda, hogy a másikra ne
+     * flippeljen át.
+     */
     uint8_t ssbo_flip = 0;
     bool paused = false;
     auto prev_frame = std::chrono::steady_clock::now();
@@ -172,6 +184,10 @@ int main(void) {
         ImGui::DragFloat("Camera pitch", &camera.pitch, 0.1, -89.999, 89.999);
         ImGui::DragFloat("Camera distance", &camera.distance, 0.02, 1, 100);
         ImGui::Separator();
+        /*
+         * Itt adhatod hozzá a saját változóidat a GUI-hoz, és törölheted
+         * azokat, amiket nem használsz.
+         */
         ImGui::DragFloat3("Gravity", glm::value_ptr(gravity), 0.01, -10, 10);
         ImGui::DragFloat3("Box high bound", glm::value_ptr(high_bound), 0.02, 0,
                           30);
@@ -182,6 +198,11 @@ int main(void) {
         ImGui::End();
 
         if (!paused) {
+            /*
+             * Itt kéne a szimulációt csinálni az SPH-val, a compute helyett.
+             * A végeredményt a glBindBufferrel, és a glBufferData-val kell
+             * feltölteni az ssbo-ba.
+             */
             glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
             ssbo_flip = 1 - ssbo_flip;
             compute_shader.use();
@@ -212,6 +233,11 @@ int main(void) {
 
         box_shader.use();
         box_shader.uniform("view_projection", camera.view_projection());
+        /*
+         * A bound-ok máshogy vannak reprezentálva a SpatialGridben.
+         * Ezeket vagy itt átváltod ebbe a reprezentációba, vagy a box_vbo-ba
+         * rakod őket, az utóbbi esetben át kell írnod a box_vertes.glsl-t.
+         */
         box_shader.uniform("low_bound", low_bound);
         box_shader.uniform("high_bound", high_bound);
         glBindVertexArray(box_vao);
