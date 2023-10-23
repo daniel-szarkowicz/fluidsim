@@ -74,29 +74,38 @@ int main(void) {
     ImGui_ImplOpenGL3_Init("#version 430");
 
     glewInit();
-    auto renderer = glGetString(GL_RENDERER);
-    auto version = glGetString(GL_VERSION);
-    printf("Renderer: %s\n", renderer);
-    printf("OpenGL version: %s\n", version);
+    printf("Renderer: %s\n", glGetString(GL_RENDERER));
+    printf("OpenGL version: %s\n", glGetString(GL_VERSION));
 
     glEnable(GL_DEBUG_OUTPUT);
     glDebugMessageCallback(message_callback, 0);
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
 
+    const char* version = "#version 430";
+    const char* sphere_struct = "src/shader/sphere_struct.glsl";
     Shader sphere_shader = Shader::builder()
+                               .vertex_source(version)
+                               .vertex_file(sphere_struct)
                                .vertex_file("src/shader/sphere_vertex.glsl")
+                               .geometry_source(version)
                                .geometry_file("src/shader/sphere_geometry.glsl")
+                               .fragment_source(version)
                                .fragment_file("src/shader/sphere_fragment.glsl")
                                .build();
 
     Shader box_shader = Shader::builder()
+                            .vertex_source(version)
                             .vertex_file("src/shader/box_vertex.glsl")
+                            .fragment_source(version)
                             .fragment_file("src/shader/box_fragment.glsl")
                             .build();
 
-    Shader compute_shader =
-        Shader::builder().compute_file("src/shader/compute.glsl").build();
+    Shader compute_shader = Shader::builder()
+                                .compute_source(version)
+                                .compute_file(sphere_struct)
+                                .compute_file("src/shader/compute.glsl")
+                                .build();
 
     std::vector<Sphere> spheres(10000);
     for (size_t i = 0; i < spheres.size(); ++i) {

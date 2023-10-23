@@ -1,5 +1,3 @@
-#version 430
-
 uniform mat4 view_projection;
 uniform vec3 low_bound;
 uniform vec3 high_bound;

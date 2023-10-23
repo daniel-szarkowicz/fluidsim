@@ -1,12 +1,4 @@
-#version 430
-
-
-struct Sphere {
-    vec4 center;
-    vec4 velocity;
-    vec4 color;
-    float radius;
-};
+// uses Sphere from sphere_struct.glsl
 
 layout(std430, binding = 3) readonly buffer points {
     Sphere spheres[];
