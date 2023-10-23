@@ -1,6 +1,7 @@
 #pragma once
 
 #include <GL/glew.h>
+#include <sstream>
 
 class Shader {
 public:
@@ -10,14 +11,10 @@ public:
 
 public:
     class builder {
-        const char* vsrc;
-        const char* vfile;
-        const char* gsrc;
-        const char* gfile;
-        const char* fsrc;
-        const char* ffile;
-        const char* csrc;
-        const char* cfile;
+        std::ostringstream vertex_src;
+        std::ostringstream geometry_src;
+        std::ostringstream fragment_src;
+        std::ostringstream compute_src;
         bool graphics;
         bool compute;
 

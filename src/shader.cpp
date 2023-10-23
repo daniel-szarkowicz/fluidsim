@@ -8,43 +8,45 @@
 #include <stdexcept>
 
 Shader::builder::builder()
-    : vsrc(nullptr), vfile(nullptr), gsrc(nullptr), gfile(nullptr),
-      fsrc(nullptr), ffile(nullptr), csrc(nullptr), cfile(nullptr),
+    : vertex_src(), geometry_src(), fragment_src(), compute_src(),
       graphics(false), compute(false) {}
 
-#define builder_function(fn_name, name, src, file, goodtype, badtype,          \
-                         variable)                                             \
-    Shader::builder& Shader::builder::fn_name(const char* input) {             \
-        if (src) {                                                             \
-            throw std::invalid_argument(name " shader source already set!");   \
-        }                                                                      \
-        if (file) {                                                            \
-            throw std::invalid_argument(name                                   \
-                                        " shader file name already set!");     \
-        }                                                                      \
+#define builder_source(fn_name, src, goodtype, badtype)                        \
+    Shader::builder& Shader::builder::fn_name(const char* source) {            \
         if (badtype) {                                                         \
             throw std::invalid_argument(                                       \
                 "Cannot combine graphics and compute shaders!");               \
         }                                                                      \
         goodtype = true;                                                       \
-        variable = input;                                                      \
+        src << source << "\n";                                                 \
         return *this;                                                          \
     }
 
-builder_function(vertex_source, "Vertex", vsrc, vfile, graphics, compute, vsrc);
-builder_function(vertex_file, "Vertex", vsrc, vfile, graphics, compute, vfile);
-builder_function(geometry_source, "Geometry", gsrc, gfile, graphics, compute,
-                 gsrc);
-builder_function(geometry_file, "Geometry", gsrc, gfile, graphics, compute,
-                 gfile);
-builder_function(fragment_source, "Fragment", fsrc, ffile, graphics, compute,
-                 fsrc);
-builder_function(fragment_file, "Fragment", fsrc, ffile, graphics, compute,
-                 ffile);
-builder_function(compute_source, "Compute", csrc, cfile, compute, graphics,
-                 csrc);
-builder_function(compute_file, "Compute", csrc, cfile, compute, graphics,
-                 cfile);
+#define builder_file(fn_name, src, goodtype, badtype)                          \
+    Shader::builder& Shader::builder::fn_name(const char* filename) {          \
+        if (badtype) {                                                         \
+            throw std::invalid_argument(                                       \
+                "Cannot combine graphics and compute shaders!");               \
+        }                                                                      \
+        std::ifstream file(filename);                                          \
+        file.exceptions(std::ifstream::failbit);                               \
+        if (file.fail()) {                                                     \
+            throw std::invalid_argument("Failed to open file!");               \
+        }                                                                      \
+        goodtype = true;                                                       \
+        src << file.rdbuf() << "\n";                                           \
+        return *this;                                                          \
+    }
+
+builder_source(vertex_source, vertex_src, graphics, compute);
+builder_source(geometry_source, geometry_src, graphics, compute);
+builder_source(fragment_source, fragment_src, graphics, compute);
+builder_source(compute_source, compute_src, compute, graphics);
+
+builder_file(vertex_file, vertex_src, graphics, compute);
+builder_file(geometry_file, geometry_src, graphics, compute);
+builder_file(fragment_file, fragment_src, graphics, compute);
+builder_file(compute_file, compute_src, compute, graphics);
 
 #define load_shader(shader_id, src, fname, type)                               \
     GLuint shader_id;                                                          \
@@ -63,31 +65,36 @@ builder_function(compute_file, "Compute", csrc, cfile, compute, graphics,
         glCompileShader(shader_id);                                            \
     }
 
+#define attach_shader(program_id, source, type)                                \
+    do {                                                                       \
+        const char* str = source.c_str();                                      \
+        GLuint shader_id = glCreateShader(type);                               \
+        glShaderSource(shader_id, 1, &str, NULL);                              \
+        glCompileShader(shader_id);                                            \
+        glAttachShader(program_id, shader_id);                                 \
+    } while (false);
+
 Shader Shader::builder::build() {
     if (graphics) {
-        if ((!vsrc && !vfile) || (!fsrc && !ffile)) {
+        std::string vertex_source = vertex_src.str();
+        std::string geometry_source = geometry_src.str();
+        std::string fragment_source = fragment_src.str();
+        if (vertex_source.length() == 0 || fragment_source.length() == 0) {
             throw std::invalid_argument(
                 "Graphics shaders require vertex and fragment shaders");
         }
-        load_shader(vertex_id, vsrc, vfile, GL_VERTEX_SHADER);
-        load_shader(fragment_id, fsrc, ffile, GL_FRAGMENT_SHADER);
-        GLuint geometry_id;
-        if (gsrc || gfile) {
-            load_shader(gid, gsrc, gfile, GL_GEOMETRY_SHADER);
-            geometry_id = gid;
-        }
         GLuint program_id = glCreateProgram();
-        glAttachShader(program_id, vertex_id);
-        if (gsrc || gfile) {
-            glAttachShader(program_id, geometry_id);
+        attach_shader(program_id, vertex_source, GL_VERTEX_SHADER);
+        attach_shader(program_id, fragment_source, GL_FRAGMENT_SHADER);
+        if (geometry_source.length() > 0) {
+            attach_shader(program_id, geometry_source, GL_GEOMETRY_SHADER);
         }
-        glAttachShader(program_id, fragment_id);
         glLinkProgram(program_id);
         return Shader(program_id);
     } else if (compute) {
-        load_shader(compute_id, csrc, cfile, GL_COMPUTE_SHADER);
+        std::string compute_source = compute_src.str();
         GLuint program_id = glCreateProgram();
-        glAttachShader(program_id, compute_id);
+        attach_shader(program_id, compute_source, GL_COMPUTE_SHADER);
         glLinkProgram(program_id);
         return Shader(program_id);
     } else {
