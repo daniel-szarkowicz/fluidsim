@@ -1,5 +1,3 @@
-#version 430
-
 in vec3 fColor;
 in vec2 fPosition;
 

@@ -1,15 +1,6 @@
-#version 430
+// uses Sphere from sphere_struct.glsl
 
 layout(local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
-
-struct Sphere {
-    vec4 center;
-    vec4 velocity;
-    vec4 color;
-    float radius;
-    uint cell_hash;
-    uint obj_id;
-};
 
 layout(std430, binding = 3) buffer inputs {
     Sphere spheres[];
