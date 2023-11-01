@@ -1,9 +1,10 @@
 #include "SpatialGrid3.h"
 
 glm::vec3 SpatialGrid3::getCell(const glm::vec4& coords) {
-	int i = ceil(coords.x / dimW);
-	int j = ceil(coords.y / dimH);
-	int k = ceil(coords.z / dimD);
+	glm::vec4 gridCoords = glm::vec4(coords.x - gridOrigin.x, coords.y - gridOrigin.y, gridOrigin.z - coords.z, 1);
+	int i = ceil(gridCoords.x / dimW);
+	int j = ceil(gridCoords.y / dimH);
+	int k = ceil(gridCoords.z / dimD);
 
 	return glm::vec3(i, j, k);
 }
@@ -48,9 +49,9 @@ std::vector<Sphere*> SpatialGrid3::getNeighbours(const glm::vec4& pos) {
 
 	for (int j = yD; j <= yU; ++j) {
 		for (int i = xL; i <= xR; ++i) {
-			for (int k = zF; k <= zB; ++k) {
-				for (auto sp : cells[j][i][k].particles) spheres.push_back(sp);
-			}
+			//for (int k = zF; k <= zB; ++k) {
+				for (auto sp : cells[j][i][idx.z].particles) spheres.push_back(sp);
+			//}
 		}
 	}
 

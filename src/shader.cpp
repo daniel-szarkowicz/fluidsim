@@ -31,6 +31,7 @@ Shader::builder::builder()
         return *this;                                                          \
     }
 
+
 builder_function(vertex_source, "Vertex", vsrc, vfile, graphics, compute, vsrc);
 builder_function(vertex_file, "Vertex", vsrc, vfile, graphics, compute, vfile);
 builder_function(geometry_source, "Geometry", gsrc, gfile, graphics, compute,
@@ -108,6 +109,7 @@ void Shader::use() { glUseProgram(program_id); }
 #define su_end(uniform, ...)                                                   \
     uniform(loc, __VA_ARGS__);                                                 \
     }
+
 
 su_start(GLfloat v0);
 su_end(glUniform1f, v0);

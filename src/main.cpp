@@ -1,4 +1,4 @@
-#include "camera.hpp"
+﻿#include "camera.hpp"
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
@@ -17,22 +17,23 @@
 #include <vector>
 #include "Particle.h"
 #include "SPH.h"
+#include "SPH2.h"
 #include "SpatialGrid3.h"
 
 using glm::vec3;
 using glm::vec4;
 
 void GLAPIENTRY message_callback(GLenum source, GLenum type, GLuint id,
-                                 GLenum severity, GLsizei length,
-                                 const GLchar* message, const void* userParam) {
+    GLenum severity, GLsizei length,
+    const GLchar* message, const void* userParam) {
     (void)source;
     (void)id;
     (void)length;
     (void)userParam;
-    fprintf(stderr,
-            "GL CALLBACK: %s type = 0x%x, severity = 0x%x, message = %s\n",
-            (type == GL_DEBUG_TYPE_ERROR ? "** GL ERROR **" : ""), type,
-            severity, message);
+    //fprintf(stderr,
+   //     "GL CALLBACK: %s type = 0x%x, severity = 0x%x, message = %s\n",
+   //     (type == GL_DEBUG_TYPE_ERROR ? "** GL ERROR **" : ""), type,
+   //     severity, message);
 }
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
@@ -78,29 +79,32 @@ int main(void) {
     glDebugMessageCallback(message_callback, 0);
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
+    //std::string path = "F:/EGYETEM/5_felev/temalab/testing/testing/";
 
     Shader sphere_shader = Shader::builder()
-                               .vertex_file("src/shader/sphere_vertex.glsl")
-                               .geometry_file("src/shader/sphere_geometry.glsl")
-                               .fragment_file("src/shader/sphere_fragment.glsl")
-                               .build();
+        .vertex_file(std::string( "src/shader/sphere_vertex.glsl").c_str())
+        .geometry_file(std::string( "src/shader/sphere_geometry.glsl").c_str())
+        .fragment_file(std::string( "src/shader/sphere_fragment.glsl").c_str())
+        .build();
+
 
     Shader box_shader = Shader::builder()
-                            .vertex_file("src/shader/box_vertex.glsl")
-                            .fragment_file("src/shader/box_fragment.glsl")
-                            .build();
+        .vertex_file(std::string("src/shader/box_vertex.glsl").c_str())
+        .fragment_file(std::string( "src/shader/box_fragment.glsl").c_str())
+        .build();
 
     Shader compute_shader =
-        Shader::builder().compute_file("src/shader/compute.glsl").build();
-
-    std::vector<Sphere> spheres(10000);
+        Shader::builder().compute_file(std::string("src/shader/compute.glsl").c_str()).build();
+    
+   // glm::vec4 bounds[] = { glm::vec4(-15, -8, 15, 1), glm::vec4(15, -8, 15, 1), glm::vec4(-15, 8, 15, 1), glm::vec4(15, 8, 15, 1), 
+  //      glm::vec4(-15, -8, -15, 1), glm::vec4(15, -8, -15, 1), glm::vec4(-15, 8, -15, 1), glm::vec4(15, 8, -15, 1) };
+    std::vector<Sphere> spheres(1000);
     for (size_t i = 0; i < spheres.size(); ++i) {
         spheres[i] = Sphere{
             .center =
                 vec4(glm::linearRand(-3.0f, 3.0f), glm::linearRand(-3.0f, 3.0f),
-                     glm::linearRand(-3.0f, 3.0f), 1),
-            .velocity = glm::vec4(glm::ballRand(20.0f), 0.0f) *
-                        glm::linearRand(0.5f, 1.0f),
+                     0, 1),
+            .velocity = glm::vec4(0,0,0,0),
             // .center =
             //     vec4(glm::linearRand(-3.0f, 3.0f),
             //     glm::linearRand(-3.0f, 3.0f), 0, 1),
@@ -109,13 +113,18 @@ int main(void) {
             .color =
                 vec4(glm::linearRand(0.1f, 1.0f), glm::linearRand(0.1f, 1.0f),
                      glm::linearRand(0.1f, 1.0f), 1.0f),
-            .radius = glm::linearRand(0.05f, 0.2f),
+            .radius = 0.1f
         };
     }
 
     /*
      * Valahol itt kéne létrehozni a SpatialGrid-et és belerakni a gömböket
      */
+
+    glm::vec4 bounds[] = { glm::vec4(-10,-7,0,1), glm::vec4(10,-7,0,1), glm::vec4(10,7,0,1), glm::vec4(-10,7,0,1) };
+
+    //SPH3 sph = SPH3(spheres, bounds, 1, 1, 1);
+    SPH2 sph = SPH2(spheres, bounds, 0.6, 0.6, 2);
 
     GLuint empty_vao;
     glCreateVertexArrays(1, &empty_vao);
@@ -146,15 +155,15 @@ int main(void) {
     glGenBuffers(2, ssbo);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo[0]);
     glBufferData(GL_SHADER_STORAGE_BUFFER, spheres.size() * sizeof(Sphere),
-                 &spheres[0], GL_DYNAMIC_DRAW);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo[1]);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, spheres.size() * sizeof(Sphere),
-                 &spheres[0], GL_DYNAMIC_DRAW);
+        &spheres[0], GL_DYNAMIC_DRAW);
+    //glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo[1]);
+    //glBufferData(GL_SHADER_STORAGE_BUFFER, spheres.size() * sizeof(Sphere),
+    //    &spheres[0], GL_DYNAMIC_DRAW);
 
-    auto camera = OrbitingCamera(vec3(0, 0, 0), 30, 0, 0);
+    auto camera = OrbitingCamera(vec3(0, 0, 0), 15, 0, 0);
     vec4 gravity = vec4(0, -8, 0, 0);
-    vec3 low_bound = vec3(-15, -8, -15);
-    vec3 high_bound = vec3(15, 8, 15);
+    vec3 low_bound = vec3(-10, -7, 0);
+    vec3 high_bound = vec3(10, 7, 0);
     float collision_multiplier = 0.95;
     /*
      * Ha csak egy ssbo-t használsz, akkor figyelj oda, hogy a másikra ne
@@ -163,13 +172,18 @@ int main(void) {
     uint8_t ssbo_flip = 0;
     bool paused = false;
     auto prev_frame = std::chrono::steady_clock::now();
-
+    bool firstFrame = true;
     while (!glfwWindowShouldClose(window)) {
         auto current_frame = std::chrono::steady_clock::now();
         float delta = std::chrono::duration_cast<std::chrono::milliseconds>(
-                          current_frame - prev_frame)
-                          .count() /
-                      1000.0f;
+            current_frame - prev_frame)
+            .count() /
+            1000.0f;
+
+        if (firstFrame) firstFrame = false;
+        else {
+            printf("");
+        }
         prev_frame = current_frame;
         glfwPollEvents();
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -190,11 +204,11 @@ int main(void) {
          */
         ImGui::DragFloat3("Gravity", glm::value_ptr(gravity), 0.01, -10, 10);
         ImGui::DragFloat3("Box high bound", glm::value_ptr(high_bound), 0.02, 0,
-                          30);
+            30);
         ImGui::DragFloat3("Box low bound", glm::value_ptr(low_bound), 0.02, -30,
-                          0);
+            0);
         ImGui::DragFloat("Collision multiplier", &collision_multiplier, 0.001,
-                         0, 1);
+            0, 1);
         ImGui::End();
 
         if (!paused) {
@@ -203,25 +217,30 @@ int main(void) {
              * A végeredményt a glBindBufferrel, és a glBufferData-val kell
              * feltölteni az ssbo-ba.
              */
+            sph.step(delta);
+            //spheres[0].center = glm::vec4(spheres[0].center.x, spheres[0].center.y - 0.1, spheres[0].center.z,1);
             glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-            ssbo_flip = 1 - ssbo_flip;
-            compute_shader.use();
-            GLint compute_work_groups[3];
-            glGetProgramiv(compute_shader.program_id,
-                           GL_COMPUTE_WORK_GROUP_SIZE, compute_work_groups);
-            compute_shader.uniform("gravity", gravity);
+            //ssbo_flip = 1 - ssbo_flip;
+            //compute_shader.use();
+           // GLint compute_work_groups[3];
+           /* glGetProgramiv(compute_shader.program_id,
+                GL_COMPUTE_WORK_GROUP_SIZE, compute_work_groups);*/
+           //printf("\n%f\n", spheres[0].center.y);
+            /*compute_shader.uniform("gravity", glm::vec3(gravity.x, gravity.y, gravity.z));
             compute_shader.uniform("low_bound", low_bound);
             compute_shader.uniform("high_bound", high_bound);
             compute_shader.uniform("dt", delta);
             compute_shader.uniform("collision_multiplier",
-                                   collision_multiplier);
-            compute_shader.uniform("object_count", (GLuint)spheres.size());
+                collision_multiplier);*/
+            //compute_shader.uniform("object_count", (GLuint)spheres.size());
 
             glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, ssbo[ssbo_flip]);
-            glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, ssbo[1 - ssbo_flip]);
-            glDispatchCompute((spheres.size() + compute_work_groups[0] - 1) /
-                                  compute_work_groups[0],
-                              1, 1);
+           // glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, ssbo[1 - ssbo_flip]);
+
+            glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(Sphere) * spheres.size(), &spheres[0], GL_DYNAMIC_DRAW);
+           /* glDispatchCompute((spheres.size() + compute_work_groups[0] - 1) /
+                compute_work_groups[0],
+                1, 1);*/
         }
 
         sphere_shader.use();

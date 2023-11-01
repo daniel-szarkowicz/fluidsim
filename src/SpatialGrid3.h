@@ -8,7 +8,6 @@
 #include "Particle.h"
 
 
-
 //Works on the same principle as SpatialGrid2 so not much needs commenting
 class SpatialGrid3 {
 	struct cell {
@@ -21,13 +20,14 @@ class SpatialGrid3 {
 	float dimW, dimH, dimD;
 	int numCellX, numCellY, numCellZ;
 
-	std::map<unsigned int, glm::vec3> particleRef;
+	std::map<size_t, glm::vec3> particleRef;
 
 
 	//indexing of the cells
 	//cells[y][x][z]
 	std::vector<std::vector<std::vector<cell>>> cells;
 	glm::vec3 getCell(const glm::vec4& coords);
+	glm::vec4 gridOrigin;
 
 	bool floatEq(float f1, float f2);
 	bool areVectorsEqual(const glm::vec3& v1, const glm::vec3& v2);
@@ -39,11 +39,14 @@ public:
 	//{bottom left front -> bottom right front -> top left front -> top right front}
 	//{bottom left back -> bottom right back -> top left back -> top right back}
 	SpatialGrid3(glm::vec4* bounds, float dimW, float dimH, float dimD): dimW(dimW), dimH(dimH), dimD(dimD) {
-		for (int i = 0; i < 8; ++i) this->bounds[i] = bounds[i];
+		for (int i = 0; i < 4; ++i) this->bounds[i] = bounds[i];
 
-		numCellX = ceil((abs(bounds[0].x) - abs(bounds[1].x)) / dimW);
-		numCellY = ceil((abs(bounds[0].y) - abs(bounds[3].y)) / dimH);
-		numCellZ = ceil((abs(bounds[0].z) - abs(bounds[4].z)) / dimD);
+		numCellX = ceil((abs(bounds[0].x - bounds[1].x)) / dimW) + 1;
+		numCellY = ceil((abs(bounds[0].y - bounds[3].y)) / dimH) + 1;
+		//numCellZ = ceil((abs(bounds[0].z - bounds[4].z)) / dimD);
+		numCellZ = 1;
+
+		gridOrigin = bounds[0];
 
 		cells = std::vector<std::vector<std::vector<cell>>>(numCellY);
 

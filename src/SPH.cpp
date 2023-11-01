@@ -19,55 +19,72 @@ float SPH3::smoothingKernelDerived(float r) {
 	return 1 / (pow(smoothingRadius, 3) * glm::pi<float>()) * cond;
 }
 
-SPH3::SPH3(std::vector<Sphere> sp, glm::vec4* bounds, float dimW, float dimH, float dimD, float r0, float k) {
-	grid = SpatialGrid3(bounds, dimW, dimH, dimD);
-	for (auto s : sp) {
-		particles.push_back(&s);
-		grid.addParticle(&s);
-	}
-}
-
 void SPH3::calculateDensities() {
 	std::vector<Sphere*> sps;
-	for (auto sphere : particles) {
-		sps = grid.getNeighbours(sphere->center);
-		sphere->density = 0;
+	for (int i = 0; i < particles.size(); ++i) {
+		sps = grid.getNeighbours(particles[i]->center);
+		density[i] = 0;
 		for (auto it : sps) {
-			if (it == sphere) continue;
-			sphere->density += smoothingKernel(glm::length(sphere->center - it->center));
+			density[i] += smoothingKernel(glm::length(particles[i]->center - it->center));
 		}
 	}
 }
 
 void SPH3::calculatePressure() {
-	for (auto sphere : particles) sphere->pressure = k * (sphere->pressure - restingDensity);
+	for (int i = 0; i < particles.size(); ++i) pressure[i] = k * (pressure[i] - restingDensity);
 }
 
-glm::vec3 SPH3::calculatePressureForce(const Sphere* defaultSp) {
-	glm::vec3 res = glm::vec3(0,0,0), dir;
+glm::vec4 SPH3::calculatePressureForce(const Sphere* defaultSp, int idx) {
+	glm::vec4 res = glm::vec4(0,0,0,1), dir;
 	float distance;
 	std::vector<Sphere*> neighbours = grid.getNeighbours(defaultSp->center);
-	for (auto sp : neighbours) {
-		distance = glm::length(defaultSp->center - sp->center);
-		dir = (defaultSp->center - sp->center) / distance;
-		res -= (sp->pressure + defaultSp->pressure) / (sp->density * 2) * dir * smoothingKernelDerived(glm::length(defaultSp->center - sp->center));
+	for (int i = 0; i < particles.size(); ++i) {
+		if (defaultSp == particles[i]) continue;
+		distance = glm::length(defaultSp->center - particles[i]->center);
+		dir = (defaultSp->center - particles[i]->center) / distance;
+		res -= (pressure[i] + pressure[idx]) / (density[i] * 2) * dir * smoothingKernelDerived(distance);
 	}
 
 	return res;
+}
+
+void SPH3::checkBounds(Sphere* sp) {
+	if (sp->center.x < bounds[0].x + sp->radius) {
+		sp->center.x = bounds[0].x + sp->radius;
+		sp->velocity.x *= -1;
+	}else if (sp->center.x > bounds[1].x - sp->radius) {
+		sp->center.x = bounds[0].x - sp->radius;
+		sp->velocity.x *= -1;
+	}
+	if (sp->center.y < bounds[0].y + sp->radius) {
+		sp->center.y = bounds[0].y + sp->radius;
+		sp->velocity.y *= -1;
+	}else if (sp->center.y > bounds[0].y - sp->radius) {
+		sp->center.y = bounds[0].y - sp->radius;
+		sp->velocity.y *= -1;
+	}
+	if (sp->center.z < bounds[0].z + sp->radius) {
+		sp->center.z = bounds[0].z + sp->radius;
+		sp->velocity.z *= -1;
+	}else if (sp->center.z > bounds[0].z - sp->radius) {
+		sp->center.z = bounds[0].z - sp->radius;
+		sp->velocity *= -1;
+	}
 }
 
 
 void SPH3::step(float dt) {
 	calculateDensities();
 	calculatePressure();
-	for (auto sphere : particles) {
-		sphere->velocity += downVec * g * dt;
-		glm::vec3 Fp = calculatePressureForce(sphere);
-		sphere->velocity += Fp / sphere->density * dt;
+#pragma omp parallel for 
+	for (int i = 0; i < particles.size(); ++i) {
+		particles[i]->velocity += downVec * g * dt;
+		glm::vec4 Fp = calculatePressureForce(particles[i], i);
+		particles[i]->velocity += Fp / density[i]* dt;
 	}
-
-	for (auto sphere : particles) {
-		sphere->center += sphere->velocity  * dt;
-
+#pragma omp parallel for 
+	for (int i = 0; i < particles.size(); ++i) {
+		particles[i]->center += particles[i]->velocity  * dt;
+		checkBounds(particles[i]);
 	}
 }
