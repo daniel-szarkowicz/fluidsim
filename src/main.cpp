@@ -20,13 +20,13 @@ using glm::vec3;
 using glm::vec4;
 
 struct Sphere {
-    vec4 center;         // 128 bits
-    vec4 velocity;       // 128 bits
-    vec4 color;          // 128 bits
-    GLfloat radius;      // 32 bits
-    GLuint cell_hash;    // 32 bits
-    GLuint obj_id;       // 32 bits
-    GLubyte _padding[4]; // 32 bits
+    vec4 center;      // 128 bits
+    vec4 velocity;    // 128 bits
+    vec4 color;       // 128 bits
+    GLfloat radius;   // 32 bits
+    GLuint cell_hash; // 32 bits
+    GLuint cell_key;  // 32 bits
+    GLuint obj_id;    // 32 bits
 };
 
 // https://www.shadertoy.com/view/WttXWX
@@ -141,26 +141,34 @@ int main(void) {
                                 .compute_file("src/shader/bitonic_merge2.glsl")
                                 .build();
 
+    Shader find_edges = Shader::builder()
+                            .compute_source(version)
+                            .compute_file(sphere_struct)
+                            .compute_file("src/shader/find_edges.glsl")
+                            .build();
+
     // TODO: move init to a compute shader
     std::vector<Sphere> spheres(10000);
     for (size_t i = 0; i < spheres.size(); ++i) {
         spheres[i] = Sphere{
-            .center =
-                vec4(glm::linearRand(-5.0f, 5.0f), glm::linearRand(-5.0f, 5.0f),
-                     glm::linearRand(-5.0f, 5.0f), 1),
-            .velocity = glm::vec4(glm::ballRand(20.0f), 0.0f) *
-                        glm::linearRand(0.5f, 1.0f),
             // .center =
-            //     vec4(glm::linearRand(-3.0f, 3.0f),
-            //     glm::linearRand(-3.0f, 3.0f), 0, 1),
-            // .velocity = glm::vec4(glm::circularRand(4.0f), 0, 0.0f) *
+            //     vec4(glm::linearRand(-5.0f, 5.0f), glm::linearRand(-5.0f, 5.0f),
+            //          glm::linearRand(-5.0f, 5.0f), 1),
+            // .velocity = glm::vec4(glm::ballRand(20.0f), 0.0f) *
             //             glm::linearRand(0.5f, 1.0f),
+            .center =
+                vec4(glm::linearRand(-3.0f, 3.0f),
+                glm::linearRand(-3.0f, 3.0f), 0, 1),
+            .velocity = glm::vec4(glm::circularRand(4.0f), 0, 0.0f) *
+                        glm::linearRand(0.5f, 1.0f),
             .color =
                 vec4(glm::linearRand(0.1f, 1.0f), glm::linearRand(0.1f, 1.0f),
                      glm::linearRand(0.1f, 1.0f), 1.0f),
             .radius = glm::linearRand(0.05f, 0.2f),
         };
-        spheres[i].cell_hash = cell_hash(spheres[i].center);
+        GLuint hash = cell_hash(spheres[i].center);
+        spheres[i].cell_hash = hash;
+        spheres[i].cell_key = hash % 256;
         spheres[i].obj_id = i;
     }
     spheres[0].radius = 0.25;
@@ -196,10 +204,17 @@ int main(void) {
     glBufferData(GL_SHADER_STORAGE_BUFFER, spheres.size() * sizeof(Sphere),
                  &spheres[0], GL_DYNAMIC_DRAW);
 
-    auto camera = OrbitingCamera(vec3(0, 0, 0), 90, 89.999, 0);
+    GLuint key_ssbo;
+    GLuint keys[257] = {0};
+    glGenBuffers(1, &key_ssbo);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, key_ssbo);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(keys), keys,
+                 GL_DYNAMIC_DRAW);
+
+    auto camera = OrbitingCamera(vec3(0, 0, 0), 30, 0, 0);
     vec4 gravity = vec4(0, -8, 0, 0);
-    vec3 low_bound = vec3(-15, -8, -15);
-    vec3 high_bound = vec3(15, 8, 15);
+    vec3 low_bound = vec3(-5, -8, -5);
+    vec3 high_bound = vec3(5, 8, 5);
     float collision_multiplier = 0.95;
     uint8_t ssbo_flip = 0;
     bool paused = false;
@@ -261,6 +276,14 @@ int main(void) {
                         1, 1);
                 }
             }
+
+            glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, key_ssbo);
+            glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+            find_edges.use();
+            find_edges.uniform("object_count", (GLuint)spheres.size());
+            glDispatchCompute((spheres.size() + compute_work_groups[0] - 1) /
+                                  compute_work_groups[0],
+                              1, 1);
 
             glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
             compute_shader.use();

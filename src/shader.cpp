@@ -71,6 +71,9 @@ builder_file(compute_file, compute_src, compute, graphics);
         GLuint shader_id = glCreateShader(type);                               \
         glShaderSource(shader_id, 1, &str, NULL);                              \
         glCompileShader(shader_id);                                            \
+        /*GLint success;                                                       \
+        glGetShaderiv(shader_id, GL_COMPILE_STATUS, &success);                 \
+        printf("shader success: %d\n", success); */                            \
         glAttachShader(program_id, shader_id);                                 \
     } while (false);
 
@@ -90,12 +93,18 @@ Shader Shader::builder::build() {
             attach_shader(program_id, geometry_source, GL_GEOMETRY_SHADER);
         }
         glLinkProgram(program_id);
+        // GLint status;
+        // glGetProgramiv(program_id, GL_LINK_STATUS, &status);
+        // printf("link status: %d\n", status);
         return Shader(program_id);
     } else if (compute) {
         std::string compute_source = compute_src.str();
         GLuint program_id = glCreateProgram();
         attach_shader(program_id, compute_source, GL_COMPUTE_SHADER);
         glLinkProgram(program_id);
+        // GLint status;
+        // glGetProgramiv(program_id, GL_LINK_STATUS, &status);
+        // printf("link status: %d\n", status);
         return Shader(program_id);
     } else {
         throw std::invalid_argument("No shader sources provided!");

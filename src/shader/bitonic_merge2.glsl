@@ -11,7 +11,7 @@ uniform uint block;
 
 void compare_and_swap(uint first, uint second) {
     if (first < object_count && second < object_count) {
-        if(spheres[first].cell_hash > spheres[second].cell_hash) {
+        if(spheres[first].cell_key > spheres[second].cell_key) {
             Sphere tmp = spheres[first];
             spheres[first] = spheres[second];
             spheres[second] = tmp;
