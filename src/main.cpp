@@ -102,25 +102,32 @@ int main(void) {
                             .fragment_file("src/shader/box_fragment.glsl")
                             .build();
 
-    Shader compute_shader = Shader::builder()
-                                .compute_source(version)
-                                .compute_file(particle)
-                                .compute_file("src/shader/compute.glsl")
-                                .build();
+    // Shader compute_shader = Shader::builder()
+    //                             .compute_source(version)
+    //                             .compute_file(particle)
+    //                             .compute_file("src/shader/compute.glsl")
+    //                             .build();
+    Shader density = Shader::builder()
+                             .compute_source(version)
+                             .compute_file(particle)
+                             .compute_file("src/shader/sph/kernel.glsl")
+                             .compute_file("src/shader/sph/density.glsl")
+                             .build();
 
-    std::vector<Particle> particles(10000);
+    std::vector<Particle> particles(8000);
     for (size_t i = 0; i < particles.size(); ++i) {
         particles[i] = Particle{
+            // .position =
+            //     vec4(glm::linearRand(-3.0f, 3.0f), glm::linearRand(-3.0f, 3.0f),
+            //          glm::linearRand(-3.0f, 3.0f), 1),
+            // .velocity = glm::vec4(glm::ballRand(20.0f), 0.0f) *
+            //             glm::linearRand(0.5f, 1.0f),
             .position =
-                vec4(glm::linearRand(-3.0f, 3.0f), glm::linearRand(-3.0f, 3.0f),
-                     glm::linearRand(-3.0f, 3.0f), 1),
-            .velocity = glm::vec4(glm::ballRand(20.0f), 0.0f) *
-                        glm::linearRand(0.5f, 1.0f),
-            // .center =
-            //     vec4(glm::linearRand(-3.0f, 3.0f),
-            //     glm::linearRand(-3.0f, 3.0f), 0, 1),
+                vec4(glm::linearRand(-15.0f, 15.0f),
+                glm::linearRand(-8.0f, 8.0f), 0, 1),
             // .velocity = glm::vec4(glm::circularRand(4.0f), 0, 0.0f) *
             //             glm::linearRand(0.5f, 1.0f),
+            .velocity = vec4(0, 0, 0, 0),
             .mass = 1.0f,
         };
     }
@@ -196,17 +203,12 @@ int main(void) {
         if (!paused) {
             glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
             ssbo_flip = 1 - ssbo_flip;
-            compute_shader.use();
+            density.use();
             GLint compute_work_groups[3];
-            glGetProgramiv(compute_shader.program_id,
+            glGetProgramiv(density.program_id,
                            GL_COMPUTE_WORK_GROUP_SIZE, compute_work_groups);
-            compute_shader.uniform("gravity", gravity);
-            compute_shader.uniform("low_bound", low_bound);
-            compute_shader.uniform("high_bound", high_bound);
-            compute_shader.uniform("dt", delta);
-            compute_shader.uniform("collision_multiplier",
-                                   collision_multiplier);
-            compute_shader.uniform("object_count", (GLuint)particles.size());
+
+            density.uniform("object_count", (GLuint)particles.size());
 
             glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, ssbo[ssbo_flip]);
             glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, ssbo[1 - ssbo_flip]);
