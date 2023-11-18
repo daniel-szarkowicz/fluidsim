@@ -1,13 +1,13 @@
-// uses Sphere from sphere_struct.glsl
+// uses Particle from particle.glsl
 
 layout(local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
 
 layout(std430, binding = 3) readonly buffer inputs {
-    Sphere spheres_in[];
+    Particle p[];
 };
 
 layout(std430, binding = 4) writeonly buffer outputs {
-    Sphere spheres_out[];
+    Particle po[];
 };
 
 uniform vec4 gravity;
@@ -17,63 +17,66 @@ uniform float dt;
 uniform float collision_multiplier;
 uniform uint object_count;
 
+uniform float particle_size = 0.1;
+
 void main() {
     uint i = gl_GlobalInvocationID.x;
     if (i >= object_count) {
         return;
     }
-    Sphere s = spheres_in[i];
+    Particle s = p[i];
     bool collided = false;
     for (uint j = 0; j < object_count; ++j) {
         if (i != j) {
-            Sphere other = spheres_in[j];
-            vec4 dir = s.center - other.center;
-            if (length(dir) < s.radius + other.radius) {
+            Particle other = p[j];
+            vec4 dir = s.position - other.position;
+            if (length(dir) < 2 * particle_size) {
                 dir = normalize(dir);
                 s.velocity = s.velocity - dot(s.velocity - other.velocity, dir)
                     / dot(dir, dir) * dir;
                 vec4 coll_center = vec4(
-                    (s.center.xyz * other.radius + other.center.xyz * s.radius)
-                    / (s.radius + other.radius), 1);
-                s.center = coll_center + dir * (s.radius);
+                    (s.position.xyz * particle_size
+                        + other.position.xyz * particle_size)
+                    / (2 * particle_size), 1);
+                s.position = coll_center + dir * (particle_size);
                 collided = true;
             }
         }
     }
     s.velocity += gravity * dt;
-    s.center += s.velocity * dt;
-    if (s.center.x > high_bound.x - s.radius) {
-        s.center.x = high_bound.x - s.radius;
+    s.position += s.velocity * dt;
+    if (s.position.x > high_bound.x - particle_size) {
+        s.position.x = high_bound.x - particle_size;
         s.velocity.x = -abs(s.velocity.x);
         collided = true;
     }
-    if (s.center.y > high_bound.y - s.radius) {
-        s.center.y = high_bound.y - s.radius;
+    if (s.position.y > high_bound.y - particle_size) {
+        s.position.y = high_bound.y - particle_size;
         s.velocity.y = -abs(s.velocity.y);
         collided = true;
     }
-    if (s.center.z > high_bound.z - s.radius) {
-        s.center.z = high_bound.z - s.radius;
+    if (s.position.z > high_bound.z - particle_size) {
+        s.position.z = high_bound.z - particle_size;
         s.velocity.z = -abs(s.velocity.z);
         collided = true;
     }
-    if (s.center.x < low_bound.x + s.radius) {
-        s.center.x = low_bound.x + s.radius;
+    if (s.position.x < low_bound.x + particle_size) {
+        s.position.x = low_bound.x + particle_size;
         s.velocity.x = +abs(s.velocity.x);
         collided = true;
     }
-    if (s.center.y < low_bound.y + s.radius) {
-        s.center.y = low_bound.y + s.radius;
+    if (s.position.y < low_bound.y + particle_size) {
+        s.position.y = low_bound.y + particle_size;
         s.velocity.y = +abs(s.velocity.y);
         collided = true;
     }
-    if (s.center.z < low_bound.z + s.radius) {
-        s.center.z = low_bound.z + s.radius;
+    if (s.position.z < low_bound.z + particle_size) {
+        s.position.z = low_bound.z + particle_size;
         s.velocity.z = +abs(s.velocity.z);
         collided = true;
     }
     if (collided) {
         s.velocity *= collision_multiplier;
     }
-    spheres_out[i] = s;
+    po[i] = s;
 }

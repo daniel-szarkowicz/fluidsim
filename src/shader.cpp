@@ -72,6 +72,10 @@ builder_file(compute_file, compute_src, compute, graphics);
         glShaderSource(shader_id, 1, &str, NULL);                              \
         glCompileShader(shader_id);                                            \
         glAttachShader(program_id, shader_id);                                 \
+        GLenum error;                                                          \
+        while ((error = glGetError()) != GL_NO_ERROR) {                        \
+            printf("%s: %s\n", #type, glewGetErrorString(error));                \
+        }                                                                      \
     } while (false);
 
 Shader Shader::builder::build() {

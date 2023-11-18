@@ -19,12 +19,12 @@
 using glm::vec3;
 using glm::vec4;
 
-struct Sphere {
-    vec4 center;
+struct Particle {
+    vec4 position;
     vec4 velocity;
-    vec4 color;
-    float radius;
-    float _padding[3];
+    float mass;
+    float density;
+    float _padding[2];
 };
 
 void GLAPIENTRY message_callback(GLenum source, GLenum type, GLuint id,
@@ -83,16 +83,17 @@ int main(void) {
     glDepthFunc(GL_LESS);
 
     const char* version = "#version 430";
-    const char* sphere_struct = "src/shader/sphere_struct.glsl";
-    Shader sphere_shader = Shader::builder()
+    const char* particle = "src/shader/particle.glsl";
+    Shader particle_shader = Shader::builder()
                                .vertex_source(version)
-                               .vertex_file(sphere_struct)
-                               .vertex_file("src/shader/sphere_vertex.glsl")
+                               .vertex_file(particle)
+                               .vertex_file("src/shader/particle_vertex.glsl")
                                .geometry_source(version)
-                               .geometry_file("src/shader/sphere_geometry.glsl")
+                               .geometry_file("src/shader/particle_geometry.glsl")
                                .fragment_source(version)
-                               .fragment_file("src/shader/sphere_fragment.glsl")
+                               .fragment_file("src/shader/particle_fragment.glsl")
                                .build();
+    printf("particle_shader\n");
 
     Shader box_shader = Shader::builder()
                             .vertex_source(version)
@@ -103,14 +104,14 @@ int main(void) {
 
     Shader compute_shader = Shader::builder()
                                 .compute_source(version)
-                                .compute_file(sphere_struct)
+                                .compute_file(particle)
                                 .compute_file("src/shader/compute.glsl")
                                 .build();
 
-    std::vector<Sphere> spheres(10000);
-    for (size_t i = 0; i < spheres.size(); ++i) {
-        spheres[i] = Sphere{
-            .center =
+    std::vector<Particle> particles(10000);
+    for (size_t i = 0; i < particles.size(); ++i) {
+        particles[i] = Particle{
+            .position =
                 vec4(glm::linearRand(-3.0f, 3.0f), glm::linearRand(-3.0f, 3.0f),
                      glm::linearRand(-3.0f, 3.0f), 1),
             .velocity = glm::vec4(glm::ballRand(20.0f), 0.0f) *
@@ -120,10 +121,7 @@ int main(void) {
             //     glm::linearRand(-3.0f, 3.0f), 0, 1),
             // .velocity = glm::vec4(glm::circularRand(4.0f), 0, 0.0f) *
             //             glm::linearRand(0.5f, 1.0f),
-            .color =
-                vec4(glm::linearRand(0.1f, 1.0f), glm::linearRand(0.1f, 1.0f),
-                     glm::linearRand(0.1f, 1.0f), 1.0f),
-            .radius = glm::linearRand(0.05f, 0.2f),
+            .mass = 1.0f,
         };
     }
 
@@ -151,11 +149,11 @@ int main(void) {
     GLuint ssbo[2];
     glGenBuffers(2, ssbo);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo[0]);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, spheres.size() * sizeof(Sphere),
-                 &spheres[0], GL_DYNAMIC_DRAW);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, particles.size() * sizeof(Particle),
+                 &particles[0], GL_DYNAMIC_DRAW);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo[1]);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, spheres.size() * sizeof(Sphere),
-                 &spheres[0], GL_DYNAMIC_DRAW);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, particles.size() * sizeof(Particle),
+                 &particles[0], GL_DYNAMIC_DRAW);
 
     auto camera = OrbitingCamera(vec3(0, 0, 0), 30, 0, 0);
     vec4 gravity = vec4(0, -8, 0, 0);
@@ -208,21 +206,21 @@ int main(void) {
             compute_shader.uniform("dt", delta);
             compute_shader.uniform("collision_multiplier",
                                    collision_multiplier);
-            compute_shader.uniform("object_count", (GLuint)spheres.size());
+            compute_shader.uniform("object_count", (GLuint)particles.size());
 
             glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, ssbo[ssbo_flip]);
             glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, ssbo[1 - ssbo_flip]);
-            glDispatchCompute((spheres.size() + compute_work_groups[0] - 1) /
+            glDispatchCompute((particles.size() + compute_work_groups[0] - 1) /
                                   compute_work_groups[0],
                               1, 1);
         }
 
-        sphere_shader.use();
-        sphere_shader.uniform("view", camera.view());
-        sphere_shader.uniform("projection", camera.projection());
+        particle_shader.use();
+        particle_shader.uniform("view", camera.view());
+        particle_shader.uniform("projection", camera.projection());
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, ssbo[ssbo_flip]);
         glBindVertexArray(empty_vao);
-        glDrawArraysInstanced(GL_POINTS, 0, 1, spheres.size());
+        glDrawArraysInstanced(GL_POINTS, 0, 1, particles.size());
 
         box_shader.use();
         box_shader.uniform("view_projection", camera.view_projection());
