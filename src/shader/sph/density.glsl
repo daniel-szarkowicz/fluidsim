@@ -20,5 +20,7 @@ void main() {
         float distance = distance(p[i].position, p[j].position);
         density += p[j].mass * kernel(distance);
     }
-    po[i].density = density;
+    Particle particle = p[i];
+    particle.density = density;
+    po[i] = particle;
 }

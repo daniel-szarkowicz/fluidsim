@@ -17,3 +17,16 @@ float kernel(float distance) {
     } // else val = 0
     return sigma * val;
 }
+
+float kernel_derived(float distance) {
+    float h = G.smoothing_radius;
+    float sigma = sigma_2D;
+    float q = distance / h;
+    float val = 0;
+    if (0 <= q && q <= 0.5) {
+        val = 6 * (3*q*q - 2*q);
+    } else if (0.5 <= q && q <= 1) {
+        val = 2 * -3*(1-q)*(1-q);
+    } // else val = 0
+    return sigma * val;
+}

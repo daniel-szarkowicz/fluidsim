@@ -11,4 +11,9 @@ struct Globals {
     float particle_size;
     float smoothing_radius;
     float delta_time;
+
+    float target_density;
+    float pressure_multiplier;
+    float _padding3;
+    float _padding4;
 };

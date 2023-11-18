@@ -102,6 +102,7 @@ int main(void) {
                             .fragment_source(version)
                             .fragment_file("src/shader/box_fragment.glsl")
                             .build();
+
     Shader density = Shader::builder()
                              .compute_source(version)
                              .compute_file(particle)
@@ -111,7 +112,16 @@ int main(void) {
                              .compute_file("src/shader/sph/density.glsl")
                              .build();
 
-    std::vector<Particle> particles(8000);
+    Shader pressure_force = Shader::builder()
+                             .compute_source(version)
+                             .compute_file(particle)
+                             .compute_file(globals)
+                             .compute_file(globals_layout)
+                             .compute_file("src/shader/sph/kernel.glsl")
+                             .compute_file("src/shader/sph/pressure_force.glsl")
+                             .build();
+
+    std::vector<Particle> particles(5000);
     for (size_t i = 0; i < particles.size(); ++i) {
         particles[i] = Particle{
             // .position =
@@ -120,8 +130,8 @@ int main(void) {
             // .velocity = glm::vec4(glm::ballRand(20.0f), 0.0f) *
             //             glm::linearRand(0.5f, 1.0f),
             .position =
-                vec4(glm::linearRand(-15.0f, 15.0f),
-                glm::linearRand(-8.0f, 8.0f), 0, 1),
+                vec4(glm::linearRand(-5.0f, 5.0f),
+                glm::linearRand(-5.0f, 5.0f), 0, 1),
             // .velocity = glm::vec4(glm::circularRand(4.0f), 0, 0.0f) *
             //             glm::linearRand(0.5f, 1.0f),
             .velocity = vec4(0, 0, 0, 0),
@@ -170,6 +180,8 @@ int main(void) {
     G.high_bound = vec3(15, 8, 15);
     G.particle_size = 0.1;
     G.smoothing_radius = 1.0;
+    G.target_density = 1.0;
+    G.pressure_multiplier = 1.0;
 
     uint8_t ssbo_flip = 0;
     bool paused = false;
@@ -201,6 +213,8 @@ int main(void) {
         ImGui::Separator();
         ImGui::DragFloat("Particle size", &G.particle_size, 0.001, 0.01, 10);
         ImGui::DragFloat("Smoothing radius", &G.smoothing_radius, 0.001, 0.01, 10);
+        ImGui::DragFloat("Targed density", &G.target_density, 0.001, 0.01, 10);
+        ImGui::DragFloat("Pressure multiplier", &G.pressure_multiplier, 0.001, 0.01, 10);
         ImGui::End();
 
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, globals_ssbo);
@@ -208,11 +222,23 @@ int main(void) {
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, globals_ssbo);
 
         if (!paused) {
+            GLint compute_work_groups[3];
             glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
             ssbo_flip = 1 - ssbo_flip;
             density.use();
-            GLint compute_work_groups[3];
             glGetProgramiv(density.program_id,
+                           GL_COMPUTE_WORK_GROUP_SIZE, compute_work_groups);
+
+            glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, ssbo[ssbo_flip]);
+            glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, ssbo[1 - ssbo_flip]);
+            glDispatchCompute((particles.size() + compute_work_groups[0] - 1) /
+                                  compute_work_groups[0],
+                              1, 1);
+
+            glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+            ssbo_flip = 1 - ssbo_flip;
+            pressure_force.use();
+            glGetProgramiv(pressure_force.program_id,
                            GL_COMPUTE_WORK_GROUP_SIZE, compute_work_groups);
 
             glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, ssbo[ssbo_flip]);
