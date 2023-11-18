@@ -22,19 +22,20 @@ void main() {
     vec4 pressure_force = vec4(0, 0, 0, 0);
     for (uint j = 0; j < G.object_count; ++j) {
         if (i != j) {
-            float distance = distance(p[i].position, p[j].position);
-            vec4 dir = (p[i].position - p[j].position)/distance;
+            float distance = distance(p[i].predicted_position, p[j].predicted_position);
+            vec4 dir = (p[i].predicted_position - p[j].predicted_position)/distance;
             if (distance == 0.0) {
                 // pseudo random
                 float alpha = float(i)/float(G.object_count);
                 dir = vec4(cos(alpha), sin(alpha), 0, 0);
             }
-            float pressure = density_to_pressure(p[j].density);
+            float pressure = (density_to_pressure(p[i].density)
+                + density_to_pressure(p[j].density))/2;
             pressure_force -= pressure * dir * kernel_derived(distance)
                 * p[j].mass / p[j].density;
         }
     }
     Particle particle = p[i];
-    particle.velocity = pressure_force / particle.density * G.delta_time;
+    particle.velocity += pressure_force / particle.density * G.delta_time;
     po[i] = particle;
 }

@@ -17,7 +17,7 @@ void main() {
     }
     float density = 0;
     for (uint j = 0; j < G.object_count; ++j) {
-        float distance = distance(p[i].position, p[j].position);
+        float distance = distance(p[i].predicted_position, p[j].predicted_position);
         density += p[j].mass * kernel(distance);
     }
     Particle particle = p[i];

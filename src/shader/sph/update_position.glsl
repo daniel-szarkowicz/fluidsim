@@ -46,5 +46,7 @@ void main() {
         particle.position.z = G.low_bound.z - G.particle_size;
         particle.velocity.z = abs(particle.velocity.z) * G.collision_multiplier;
     }
+    particle.predicted_position =
+        particle.position + particle.velocity * G.delta_time;
     po[i] = particle;
 }

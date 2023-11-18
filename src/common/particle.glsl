@@ -1,5 +1,6 @@
 struct Particle {
     vec4 position;
+    vec4 predicted_position;
 
     vec4 velocity;
 

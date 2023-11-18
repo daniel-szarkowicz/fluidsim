@@ -131,7 +131,9 @@ int main(void) {
                              .build();
 
     Shader compute_pipeline[] = {
-        density, pressure_force, update_position
+        update_position,
+        density,
+        pressure_force,
     };
 
     std::vector<Particle> particles(5000);
