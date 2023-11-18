@@ -143,8 +143,8 @@ int main(void) {
             // .velocity = glm::vec4(glm::ballRand(20.0f), 0.0f) *
             //             glm::linearRand(0.5f, 1.0f),
             .position =
-                vec4(glm::linearRand(-5.0f, 5.0f),
-                glm::linearRand(-5.0f, 5.0f), 0, 1),
+                vec4(glm::linearRand(-15.0f, 15.0f),
+                glm::linearRand(-8.0f, 8.0f), 0, 1),
             // .velocity = glm::vec4(glm::circularRand(4.0f), 0, 0.0f) *
             //             glm::linearRand(0.5f, 1.0f),
             .velocity = vec4(0, 0, 0, 0),
