@@ -19,13 +19,7 @@
 using glm::vec3;
 using glm::vec4;
 
-struct Particle {
-    vec4 position;
-    vec4 velocity;
-    float mass;
-    float density;
-    float _padding[2];
-};
+#include "common/particle.glsl"
 
 void GLAPIENTRY message_callback(GLenum source, GLenum type, GLuint id,
                                  GLenum severity, GLsizei length,
@@ -83,7 +77,7 @@ int main(void) {
     glDepthFunc(GL_LESS);
 
     const char* version = "#version 430";
-    const char* particle = "src/shader/particle.glsl";
+    const char* particle = "src/common/particle.glsl";
     Shader particle_shader = Shader::builder()
                                .vertex_source(version)
                                .vertex_file(particle)
