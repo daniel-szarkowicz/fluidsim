@@ -121,6 +121,19 @@ int main(void) {
                              .compute_file("src/shader/sph/pressure_force.glsl")
                              .build();
 
+    Shader update_position = Shader::builder()
+                             .compute_source(version)
+                             .compute_file(particle)
+                             .compute_file(globals)
+                             .compute_file(globals_layout)
+                             .compute_file("src/shader/sph/kernel.glsl")
+                             .compute_file("src/shader/sph/update_position.glsl")
+                             .build();
+
+    Shader compute_pipeline[] = {
+        density, pressure_force, update_position
+    };
+
     std::vector<Particle> particles(5000);
     for (size_t i = 0; i < particles.size(); ++i) {
         particles[i] = Particle{
@@ -174,7 +187,7 @@ int main(void) {
 
     auto camera = OrbitingCamera(vec3(0, 0, 0), 30, 0, 0);
     Globals G;
-    G.gravity = vec4(0, -8, 0, 0);
+    G.gravity = vec4(0, 0, 0, 0);
     G.low_bound = vec3(-15, -8, -15);
     G.object_count = particles.size();
     G.high_bound = vec3(15, 8, 15);
@@ -182,9 +195,10 @@ int main(void) {
     G.smoothing_radius = 1.0;
     G.target_density = 1.0;
     G.pressure_multiplier = 1.0;
+    G.collision_multiplier = 0.9;
 
     uint8_t ssbo_flip = 0;
-    bool paused = false;
+    bool paused = true;
     auto prev_frame = std::chrono::steady_clock::now();
 
     while (!glfwWindowShouldClose(window)) {
@@ -215,6 +229,7 @@ int main(void) {
         ImGui::DragFloat("Smoothing radius", &G.smoothing_radius, 0.001, 0.01, 10);
         ImGui::DragFloat("Targed density", &G.target_density, 0.001, 0.01, 10);
         ImGui::DragFloat("Pressure multiplier", &G.pressure_multiplier, 0.001, 0.01, 10);
+        ImGui::DragFloat("Collision multiplier", &G.collision_multiplier, 0.01, 0.1, 1);
         ImGui::End();
 
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, globals_ssbo);
@@ -222,30 +237,20 @@ int main(void) {
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, globals_ssbo);
 
         if (!paused) {
-            GLint compute_work_groups[3];
-            glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-            ssbo_flip = 1 - ssbo_flip;
-            density.use();
-            glGetProgramiv(density.program_id,
-                           GL_COMPUTE_WORK_GROUP_SIZE, compute_work_groups);
+            for (auto shader : compute_pipeline) {
+                GLint compute_work_groups[3];
+                glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+                ssbo_flip = 1 - ssbo_flip;
+                shader.use();
+                glGetProgramiv(shader.program_id,
+                               GL_COMPUTE_WORK_GROUP_SIZE, compute_work_groups);
 
-            glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, ssbo[ssbo_flip]);
-            glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, ssbo[1 - ssbo_flip]);
-            glDispatchCompute((particles.size() + compute_work_groups[0] - 1) /
-                                  compute_work_groups[0],
-                              1, 1);
-
-            glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-            ssbo_flip = 1 - ssbo_flip;
-            pressure_force.use();
-            glGetProgramiv(pressure_force.program_id,
-                           GL_COMPUTE_WORK_GROUP_SIZE, compute_work_groups);
-
-            glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, ssbo[ssbo_flip]);
-            glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, ssbo[1 - ssbo_flip]);
-            glDispatchCompute((particles.size() + compute_work_groups[0] - 1) /
-                                  compute_work_groups[0],
-                              1, 1);
+                glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, ssbo[ssbo_flip]);
+                glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, ssbo[1 - ssbo_flip]);
+                glDispatchCompute((particles.size() + compute_work_groups[0] - 1) /
+                                      compute_work_groups[0],
+                                  1, 1);
+            }
         }
 
         particle_shader.use();

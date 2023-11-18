@@ -14,6 +14,6 @@ struct Globals {
 
     float target_density;
     float pressure_multiplier;
+    float collision_multiplier;
     float _padding3;
-    float _padding4;
 };

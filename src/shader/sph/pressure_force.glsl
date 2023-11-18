@@ -21,9 +21,9 @@ void main() {
     }
     vec4 pressure_force = vec4(0, 0, 0, 0);
     for (uint j = 0; j < G.object_count; ++j) {
-        if (i != j) {
-            vec4 dir = normalize(p[i].position - p[j].position);
-            float distance = distance(p[i].position, p[j].position);
+        float distance = distance(p[i].position, p[j].position);
+        if (distance > 0.0001) {
+            vec4 dir = (p[i].position - p[j].position)/distance;
             float pressure = density_to_pressure(p[j].density);
             pressure_force -= pressure * dir * kernel_derived(distance)
                 * p[j].mass / p[j].density;
@@ -31,6 +31,5 @@ void main() {
     }
     Particle particle = p[i];
     particle.velocity += pressure_force / particle.density * G.delta_time;
-    particle.position += particle.velocity * G.delta_time;
     po[i] = particle;
 }
