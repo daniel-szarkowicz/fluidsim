@@ -20,6 +20,7 @@ using glm::vec3;
 using glm::vec4;
 
 #include "common/particle.glsl"
+#include "common/globals.glsl"
 
 void GLAPIENTRY message_callback(GLenum source, GLenum type, GLuint id,
                                  GLenum severity, GLsizei length,
@@ -60,7 +61,6 @@ int main(void) {
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
-    (void)io;
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
     ImGui::StyleColorsDark();
 
@@ -78,9 +78,14 @@ int main(void) {
 
     const char* version = "#version 430";
     const char* particle = "src/common/particle.glsl";
+    const char* globals = "src/common/globals.glsl";
+    const char* globals_layout = "src/shader/globals_layout.glsl";
+
     Shader particle_shader = Shader::builder()
                                .vertex_source(version)
                                .vertex_file(particle)
+                               .vertex_file(globals)
+                               .vertex_file(globals_layout)
                                .vertex_file("src/shader/particle_vertex.glsl")
                                .geometry_source(version)
                                .geometry_file("src/shader/particle_geometry.glsl")
@@ -91,19 +96,17 @@ int main(void) {
 
     Shader box_shader = Shader::builder()
                             .vertex_source(version)
+                            .vertex_file(globals)
+                            .vertex_file(globals_layout)
                             .vertex_file("src/shader/box_vertex.glsl")
                             .fragment_source(version)
                             .fragment_file("src/shader/box_fragment.glsl")
                             .build();
-
-    // Shader compute_shader = Shader::builder()
-    //                             .compute_source(version)
-    //                             .compute_file(particle)
-    //                             .compute_file("src/shader/compute.glsl")
-    //                             .build();
     Shader density = Shader::builder()
                              .compute_source(version)
                              .compute_file(particle)
+                             .compute_file(globals)
+                             .compute_file(globals_layout)
                              .compute_file("src/shader/sph/kernel.glsl")
                              .compute_file("src/shader/sph/density.glsl")
                              .build();
@@ -156,18 +159,25 @@ int main(void) {
     glBufferData(GL_SHADER_STORAGE_BUFFER, particles.size() * sizeof(Particle),
                  &particles[0], GL_DYNAMIC_DRAW);
 
+    GLuint globals_ssbo;
+    glGenBuffers(1, &globals_ssbo);
+
     auto camera = OrbitingCamera(vec3(0, 0, 0), 30, 0, 0);
-    vec4 gravity = vec4(0, -8, 0, 0);
-    vec3 low_bound = vec3(-15, -8, -15);
-    vec3 high_bound = vec3(15, 8, 15);
-    float collision_multiplier = 0.95;
+    Globals G;
+    G.gravity = vec4(0, -8, 0, 0);
+    G.low_bound = vec3(-15, -8, -15);
+    G.object_count = particles.size();
+    G.high_bound = vec3(15, 8, 15);
+    G.particle_size = 0.1;
+    G.smoothing_radius = 1.0;
+
     uint8_t ssbo_flip = 0;
     bool paused = false;
     auto prev_frame = std::chrono::steady_clock::now();
 
     while (!glfwWindowShouldClose(window)) {
         auto current_frame = std::chrono::steady_clock::now();
-        float delta = std::chrono::duration_cast<std::chrono::milliseconds>(
+        G.delta_time = std::chrono::duration_cast<std::chrono::milliseconds>(
                           current_frame - prev_frame)
                           .count() /
                       1000.0f;
@@ -185,14 +195,17 @@ int main(void) {
         ImGui::DragFloat("Camera pitch", &camera.pitch, 0.1, -89.999, 89.999);
         ImGui::DragFloat("Camera distance", &camera.distance, 0.02, 1, 100);
         ImGui::Separator();
-        ImGui::DragFloat3("Gravity", glm::value_ptr(gravity), 0.01, -10, 10);
-        ImGui::DragFloat3("Box high bound", glm::value_ptr(high_bound), 0.02, 0,
-                          30);
-        ImGui::DragFloat3("Box low bound", glm::value_ptr(low_bound), 0.02, -30,
-                          0);
-        ImGui::DragFloat("Collision multiplier", &collision_multiplier, 0.001,
-                         0, 1);
+        ImGui::DragFloat3("Gravity", glm::value_ptr(G.gravity), 0.01, -10, 10);
+        ImGui::DragFloat3("Box high bound", glm::value_ptr(G.high_bound), 0.02, 0, 30);
+        ImGui::DragFloat3("Box low bound", glm::value_ptr(G.low_bound), 0.02, -30, 0);
+        ImGui::Separator();
+        ImGui::DragFloat("Particle size", &G.particle_size, 0.001, 0.01, 10);
+        ImGui::DragFloat("Smoothing radius", &G.smoothing_radius, 0.001, 0.01, 10);
         ImGui::End();
+
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, globals_ssbo);
+        glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(G), &G, GL_DYNAMIC_DRAW);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, globals_ssbo);
 
         if (!paused) {
             glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
@@ -201,8 +214,6 @@ int main(void) {
             GLint compute_work_groups[3];
             glGetProgramiv(density.program_id,
                            GL_COMPUTE_WORK_GROUP_SIZE, compute_work_groups);
-
-            density.uniform("object_count", (GLuint)particles.size());
 
             glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, ssbo[ssbo_flip]);
             glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, ssbo[1 - ssbo_flip]);
@@ -220,8 +231,6 @@ int main(void) {
 
         box_shader.use();
         box_shader.uniform("view_projection", camera.view_projection());
-        box_shader.uniform("low_bound", low_bound);
-        box_shader.uniform("high_bound", high_bound);
         glBindVertexArray(box_vao);
         glBindBuffer(GL_ARRAY_BUFFER, box_vbo);
         glDrawArrays(GL_LINES, 0, 24);

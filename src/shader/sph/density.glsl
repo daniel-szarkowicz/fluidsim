@@ -10,15 +10,13 @@ layout(std430, binding = 4) writeonly buffer outputs {
     Particle po[];
 };
 
-uniform uint object_count;
-
 void main() {
     uint i = gl_GlobalInvocationID.x;
-    if (i >= object_count) {
+    if (i >= G.object_count) {
         return;
     }
     float density = 0;
-    for (uint j = 0; j < object_count; ++j) {
+    for (uint j = 0; j < G.object_count; ++j) {
         float distance = distance(p[i].position, p[j].position);
         density += p[j].mass * kernel(distance);
     }
