@@ -48,5 +48,8 @@ void main() {
     }
     particle.predicted_position =
         particle.position + particle.velocity * G.delta_time;
+    ivec4 cell_pos = cell_pos(particle.predicted_position);
+    particle.cell_hash = cell_hash(cell_pos);
+    particle.cell_key = cell_key(particle.cell_hash);
     po[i] = particle;
 }

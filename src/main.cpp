@@ -80,12 +80,15 @@ int main(void) {
     const char* particle = "src/common/particle.glsl";
     const char* globals = "src/common/globals.glsl";
     const char* globals_layout = "src/shader/globals_layout.glsl";
+    const char* hash = "src/shader/hash.glsl";
+    const char* kernel = "src/shader/sph/kernel.glsl";
 
     Shader particle_shader = Shader::builder()
                                .vertex_source(version)
                                .vertex_file(particle)
                                .vertex_file(globals)
                                .vertex_file(globals_layout)
+                               .vertex_file(hash)
                                .vertex_file("src/shader/particle_vertex.glsl")
                                .geometry_source(version)
                                .geometry_file("src/shader/particle_geometry.glsl")
@@ -108,7 +111,8 @@ int main(void) {
                              .compute_file(particle)
                              .compute_file(globals)
                              .compute_file(globals_layout)
-                             .compute_file("src/shader/sph/kernel.glsl")
+                             .compute_file(hash)
+                             .compute_file(kernel)
                              .compute_file("src/shader/sph/density.glsl")
                              .build();
 
@@ -117,7 +121,8 @@ int main(void) {
                              .compute_file(particle)
                              .compute_file(globals)
                              .compute_file(globals_layout)
-                             .compute_file("src/shader/sph/kernel.glsl")
+                             .compute_file(hash)
+                             .compute_file(kernel)
                              .compute_file("src/shader/sph/pressure_force.glsl")
                              .build();
 
@@ -126,7 +131,8 @@ int main(void) {
                              .compute_file(particle)
                              .compute_file(globals)
                              .compute_file(globals_layout)
-                             .compute_file("src/shader/sph/kernel.glsl")
+                             .compute_file(hash)
+                             .compute_file(kernel)
                              .compute_file("src/shader/sph/update_position.glsl")
                              .build();
 
@@ -198,6 +204,7 @@ int main(void) {
     G.target_density = 1.0;
     G.pressure_multiplier = 1.0;
     G.collision_multiplier = 0.9;
+    G.key_count = 256;
 
     uint8_t ssbo_flip = 0;
     bool paused = true;
