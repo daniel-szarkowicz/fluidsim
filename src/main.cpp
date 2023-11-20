@@ -207,6 +207,8 @@ int main(void) {
     // ez a szimulációhoz lehet nagyobb, de így jobb a vizualizáció
     G.key_count = 8*1024/4; // 8 KB / 4 B
     G.selected_index = 0;
+    G.visualization = VISUALIZATION_DENSITY;
+    G.density_color_multiplier = 1.0;
 
     uint8_t ssbo_flip = 0;
     bool paused = true;
@@ -227,22 +229,33 @@ int main(void) {
         ImGui::Begin("Settings");
         ImGui::Text("FPS: %2.2f", ImGui::GetIO().Framerate);
         ImGui::Checkbox("Pause", &paused);
-        ImGui::Separator();
+        ImGui::SeparatorText("Camera settings");
         ImGui::DragFloat("Camera yaw", &camera.yaw, 0.2, 0, 360);
         ImGui::DragFloat("Camera pitch", &camera.pitch, 0.1, -89.999, 89.999);
         ImGui::DragFloat("Camera distance", &camera.distance, 0.02, 1, 100);
-        ImGui::Separator();
+        ImGui::SeparatorText("Generic physics settings");
         ImGui::DragFloat3("Gravity", glm::value_ptr(G.gravity), 0.01, -10, 10);
         ImGui::DragFloat3("Box high bound", glm::value_ptr(G.high_bound), 0.02, 0, 30);
         ImGui::DragFloat3("Box low bound", glm::value_ptr(G.low_bound), 0.02, -30, 0);
-        ImGui::Separator();
-        ImGui::DragFloat("Particle size", &G.particle_size, 0.001, 0.01, 10);
+        ImGui::SeparatorText("SPH settings");
         ImGui::DragFloat("Smoothing radius", &G.smoothing_radius, 0.001, 0.01, 10);
         ImGui::DragFloat("Targed density", &G.target_density, 0.001, 0.01, 10);
         ImGui::DragFloat("Pressure multiplier", &G.pressure_multiplier, 0.001, 0.01, 10);
         ImGui::DragFloat("Collision multiplier", &G.collision_multiplier, 0.01, 0.1, 1);
-        ImGui::Separator();
-        ImGui::DragInt("Selected particle", (int*)&G.selected_index, 0.1, 0, G.object_count-1);
+        ImGui::SeparatorText("Visualization settings");
+        ImGui::DragFloat("Particle size", &G.particle_size, 0.001, 0.01, 10);
+        ImGui::DragFloat("Density color multiplier", &G.density_color_multiplier, 0.01, 0.01, 10);
+        ImGui::DragInt("Selected particle (cell key)", (int*)&G.selected_index, 0.1, 0, G.object_count-1);
+        if(ImGui::RadioButton("Visualize density",
+                              G.visualization == VISUALIZATION_DENSITY)
+        ) {
+            G.visualization = VISUALIZATION_DENSITY;
+        }
+        if(ImGui::RadioButton("Visualize cell key",
+                              G.visualization == VISUALIZATION_CELL_KEY)
+        ) {
+            G.visualization = VISUALIZATION_CELL_KEY;
+        }
         ImGui::End();
 
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, globals_ssbo);

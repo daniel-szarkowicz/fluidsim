@@ -12,40 +12,57 @@ out float vRadius;
 void main() {
     uint i = gl_InstanceID;
     gl_Position = view * p[i].position;
-    // float relative_density = p[i].density - G.target_density;
-    // if (relative_density < 0) {
-    //     vColor = mix(vec4(1, 1, 1, 1), vec4(0, 1, 0, 1), log(1-relative_density));
-    // } else {
-    //     vColor = mix(vec4(1, 1, 1, 1), vec4(1, 0, 0, 1), log(1+relative_density));
-    // }
+    vRadius = G.particle_size;
 
-
-    if(G.selected_index == i) {
-        vColor = vec4(0, 0, 1, 1);
-    } else {
-        Particle s = p[G.selected_index];
-        vColor = vec4(0, 0, 0, 1);
-        if (
-            distance(p[i].position, s.position)
-            < G.smoothing_radius
-        ) {
-            vColor.g = 1;
-        }
-        ivec4 s_cell = cell_pos(s.position);
-        bool same_key = false;
-        for (uint coi = 0; coi < 27; ++coi) {
-            uint key = cell_key(cell_hash(s_cell + cell_neighbors[coi]));
-            if (key == p[i].cell_key) {
-                same_key = true;
+    switch(G.visualization) {
+        case VISUALIZATION_DENSITY: {
+            float relative_density = p[i].density - G.target_density;
+            relative_density *= G.density_color_multiplier;
+            if (relative_density < 0) {
+                vColor = mix(
+                    vec4(1, 1, 1, 1),
+                    vec4(0, 1, 0, 1),
+                    log(1-relative_density)
+                );
+            } else {
+                vColor = mix(
+                    vec4(1, 1, 1, 1),
+                    vec4(1, 0, 0, 1),
+                    log(1+relative_density)
+                );
             }
-        }
-        if (same_key) {
-            vColor.r = 1;
-        } else {
-            vColor.r = float(p[i].cell_key) / 256;
-            vColor.g = float(p[i].cell_key) / 256;
-            vColor.b = float(p[i].cell_key) / 256;
+        } break;
+        case VISUALIZATION_CELL_KEY: {
+            if(G.selected_index == i) {
+                vColor = vec4(0, 0, 1, 1);
+            } else {
+                Particle s = p[G.selected_index];
+                vColor = vec4(0, 0, 0, 1);
+                if (
+                    distance(p[i].position, s.position)
+                    < G.smoothing_radius
+                ) {
+                    vColor.g = 1;
+                }
+                ivec4 s_cell = cell_pos(s.position);
+                bool same_key = false;
+                for (uint coi = 0; coi < 27; ++coi) {
+                    uint key = cell_key(cell_hash(s_cell + cell_neighbors[coi]));
+                    if (key == p[i].cell_key) {
+                        same_key = true;
+                    }
+                }
+                if (same_key) {
+                    vColor.r = 1;
+                } else {
+                    vColor.r = float(p[i].cell_key) / G.key_count;
+                    vColor.g = float(p[i].cell_key) / G.key_count;
+                    vColor.b = float(p[i].cell_key) / G.key_count;
+                }
+            }
+        } break;
+        default: {
+            vColor = vec4(1, 1, 0, 1);
         }
     }
-    vRadius = G.particle_size;
 }

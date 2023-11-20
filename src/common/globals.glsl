@@ -18,7 +18,10 @@ struct Globals {
     uint key_count;
 
     uint selected_index;
+    uint visualization;
+    float density_color_multiplier;
     float _padding3;
-    float _padding4;
-    float _padding5;
 };
+
+#define VISUALIZATION_DENSITY 0
+#define VISUALIZATION_CELL_KEY 1
