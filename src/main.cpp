@@ -83,7 +83,7 @@ int main(void) {
     const char* hash = "src/shader/hash.glsl";
     const char* kernel = "src/shader/sph/kernel.glsl";
 
-    Shader particle_shader = Shader::builder()
+    GraphicsShader particle_shader = GraphicsShader::builder()
                                .vertex_source(version)
                                .vertex_file(particle)
                                .vertex_file(globals)
@@ -97,7 +97,7 @@ int main(void) {
                                .build();
     printf("particle_shader\n");
 
-    Shader box_shader = Shader::builder()
+    GraphicsShader box_shader = GraphicsShader::builder()
                             .vertex_source(version)
                             .vertex_file(globals)
                             .vertex_file(globals_layout)
@@ -106,7 +106,7 @@ int main(void) {
                             .fragment_file("src/shader/box_fragment.glsl")
                             .build();
 
-    Shader density = Shader::builder()
+    ComputeShader density = ComputeShader::builder()
                              .compute_source(version)
                              .compute_file(particle)
                              .compute_file(globals)
@@ -116,7 +116,7 @@ int main(void) {
                              .compute_file("src/shader/sph/density.glsl")
                              .build();
 
-    Shader pressure_force = Shader::builder()
+    ComputeShader pressure_force = ComputeShader::builder()
                              .compute_source(version)
                              .compute_file(particle)
                              .compute_file(globals)
@@ -126,7 +126,7 @@ int main(void) {
                              .compute_file("src/shader/sph/pressure_force.glsl")
                              .build();
 
-    Shader update_position = Shader::builder()
+    ComputeShader update_position = ComputeShader::builder()
                              .compute_source(version)
                              .compute_file(particle)
                              .compute_file(globals)
@@ -136,7 +136,7 @@ int main(void) {
                              .compute_file("src/shader/sph/update_position.glsl")
                              .build();
 
-    Shader compute_pipeline[] = {
+    ComputeShader compute_pipeline[] = {
         update_position,
         density,
         pressure_force,
@@ -264,18 +264,11 @@ int main(void) {
 
         if (!paused) {
             for (auto shader : compute_pipeline) {
-                GLint compute_work_groups[3];
                 glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
                 ssbo_flip = 1 - ssbo_flip;
-                shader.use();
-                glGetProgramiv(shader.program_id,
-                               GL_COMPUTE_WORK_GROUP_SIZE, compute_work_groups);
-
                 glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, ssbo[ssbo_flip]);
                 glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, ssbo[1 - ssbo_flip]);
-                glDispatchCompute((particles.size() + compute_work_groups[0] - 1) /
-                                      compute_work_groups[0],
-                                  1, 1);
+                shader.dispatch_executions(G.object_count);
             }
         }
 

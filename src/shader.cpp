@@ -7,46 +7,36 @@
 #include <sstream>
 #include <stdexcept>
 
-Shader::builder::builder()
-    : vertex_src(), geometry_src(), fragment_src(), compute_src(),
-      graphics(false), compute(false) {}
+GraphicsShader::builder::builder()
+    : vertex_src(), geometry_src(), fragment_src() {}
+ComputeShader::builder::builder(): compute_src() {}
 
-#define builder_source(fn_name, src, goodtype, badtype)                        \
-    Shader::builder& Shader::builder::fn_name(const char* source) {            \
-        if (badtype) {                                                         \
-            throw std::invalid_argument(                                       \
-                "Cannot combine graphics and compute shaders!");               \
-        }                                                                      \
-        goodtype = true;                                                       \
+#define builder_source(type_name, fn_name, src)                                \
+    type_name::builder& type_name::builder::fn_name(const char* source) {      \
         src << source << "\n";                                                 \
         return *this;                                                          \
     }
 
-#define builder_file(fn_name, src, goodtype, badtype)                          \
-    Shader::builder& Shader::builder::fn_name(const char* filename) {          \
-        if (badtype) {                                                         \
-            throw std::invalid_argument(                                       \
-                "Cannot combine graphics and compute shaders!");               \
-        }                                                                      \
+#define builder_file(type_name, fn_name, src)                                  \
+    type_name::builder& type_name::builder::fn_name(const char* filename) {    \
         std::ifstream file(filename);                                          \
         file.exceptions(std::ifstream::failbit);                               \
         if (file.fail()) {                                                     \
             throw std::invalid_argument("Failed to open file!");               \
         }                                                                      \
-        goodtype = true;                                                       \
         src << file.rdbuf() << "\n";                                           \
         return *this;                                                          \
     }
 
-builder_source(vertex_source, vertex_src, graphics, compute);
-builder_source(geometry_source, geometry_src, graphics, compute);
-builder_source(fragment_source, fragment_src, graphics, compute);
-builder_source(compute_source, compute_src, compute, graphics);
+builder_source(GraphicsShader, vertex_source, vertex_src);
+builder_source(GraphicsShader, geometry_source, geometry_src);
+builder_source(GraphicsShader, fragment_source, fragment_src);
+builder_source(ComputeShader, compute_source, compute_src);
 
-builder_file(vertex_file, vertex_src, graphics, compute);
-builder_file(geometry_file, geometry_src, graphics, compute);
-builder_file(fragment_file, fragment_src, graphics, compute);
-builder_file(compute_file, compute_src, compute, graphics);
+builder_file(GraphicsShader, vertex_file, vertex_src);
+builder_file(GraphicsShader, geometry_file, geometry_src);
+builder_file(GraphicsShader, fragment_file, fragment_src);
+builder_file(ComputeShader, compute_file, compute_src);
 
 #define load_shader(shader_id, src, fname, type)                               \
     GLuint shader_id;                                                          \
@@ -74,40 +64,56 @@ builder_file(compute_file, compute_src, compute, graphics);
         glAttachShader(program_id, shader_id);                                 \
         GLenum error;                                                          \
         while ((error = glGetError()) != GL_NO_ERROR) {                        \
-            printf("%s: %s\n", #type, glewGetErrorString(error));                \
+            printf("%s: %s\n", #type, glewGetErrorString(error));              \
         }                                                                      \
     } while (false);
 
-Shader Shader::builder::build() {
-    if (graphics) {
-        std::string vertex_source = vertex_src.str();
-        std::string geometry_source = geometry_src.str();
-        std::string fragment_source = fragment_src.str();
-        if (vertex_source.length() == 0 || fragment_source.length() == 0) {
-            throw std::invalid_argument(
-                "Graphics shaders require vertex and fragment shaders");
-        }
-        GLuint program_id = glCreateProgram();
-        attach_shader(program_id, vertex_source, GL_VERTEX_SHADER);
-        attach_shader(program_id, fragment_source, GL_FRAGMENT_SHADER);
-        if (geometry_source.length() > 0) {
-            attach_shader(program_id, geometry_source, GL_GEOMETRY_SHADER);
-        }
-        glLinkProgram(program_id);
-        return Shader(program_id);
-    } else if (compute) {
-        std::string compute_source = compute_src.str();
-        GLuint program_id = glCreateProgram();
-        attach_shader(program_id, compute_source, GL_COMPUTE_SHADER);
-        glLinkProgram(program_id);
-        return Shader(program_id);
-    } else {
-        throw std::invalid_argument("No shader sources provided!");
+GraphicsShader GraphicsShader::builder::build() {
+    std::string vertex_source = vertex_src.str();
+    std::string geometry_source = geometry_src.str();
+    std::string fragment_source = fragment_src.str();
+    if (vertex_source.length() == 0 || fragment_source.length() == 0) {
+        throw std::invalid_argument(
+            "Graphics shaders require vertex and fragment shaders");
     }
+    GLuint program_id = glCreateProgram();
+    attach_shader(program_id, vertex_source, GL_VERTEX_SHADER);
+    attach_shader(program_id, fragment_source, GL_FRAGMENT_SHADER);
+    if (geometry_source.length() > 0) {
+        attach_shader(program_id, geometry_source, GL_GEOMETRY_SHADER);
+    }
+    glLinkProgram(program_id);
+    return GraphicsShader(program_id);
+}
+
+ComputeShader ComputeShader::builder::build() {
+    std::string compute_source = compute_src.str();
+    GLuint program_id = glCreateProgram();
+    attach_shader(program_id, compute_source, GL_COMPUTE_SHADER);
+    glLinkProgram(program_id);
+    return ComputeShader(program_id);
 }
 
 Shader::Shader(GLuint program_id): program_id(program_id) {}
+GraphicsShader::GraphicsShader(GLuint program_id): Shader(program_id) {}
+ComputeShader::ComputeShader(GLuint program_id): Shader(program_id) {}
+
 void Shader::use() { glUseProgram(program_id); }
+
+void ComputeShader::dispatch_workgroups(GLuint x, GLuint y, GLuint z) {
+    use();
+    glDispatchCompute(x, y, z);
+}
+
+void ComputeShader::dispatch_executions(GLuint x, GLuint y, GLuint z) {
+    GLint w[3];
+    glGetProgramiv(program_id, GL_COMPUTE_WORK_GROUP_SIZE, w);
+    dispatch_workgroups(
+        (x + w[0] - 1) / w[0],
+        (y + w[1] - 1) / w[1],
+        (z + w[2] - 1) / w[2]
+    );
+}
 
 #define su_start(...)                                                          \
     template <> void Shader::uniform(const char* name, __VA_ARGS__) {          \
