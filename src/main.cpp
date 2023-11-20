@@ -181,17 +181,21 @@ int main(void) {
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
 
-    GLuint ssbo[2];
-    glGenBuffers(2, ssbo);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo[0]);
+    GLuint input_particles;
+    GLuint output_particles;
+    glGenBuffers(1, &input_particles);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, input_particles);
     glBufferData(GL_SHADER_STORAGE_BUFFER, particles.size() * sizeof(Particle),
-                 &particles[0], GL_DYNAMIC_DRAW);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo[1]);
+                 &particles[0], GL_DYNAMIC_COPY);
+    glGenBuffers(1, &output_particles);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, output_particles);
     glBufferData(GL_SHADER_STORAGE_BUFFER, particles.size() * sizeof(Particle),
-                 &particles[0], GL_DYNAMIC_DRAW);
+                 NULL, GL_DYNAMIC_COPY);
 
     GLuint globals_ssbo;
     glGenBuffers(1, &globals_ssbo);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, globals_ssbo);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, globals_ssbo);
 
     auto camera = OrbitingCamera(vec3(0, 0, 0), 30, 0, 0);
     Globals G;
@@ -210,7 +214,6 @@ int main(void) {
     G.visualization = VISUALIZATION_DENSITY;
     G.density_color_multiplier = 1.0;
 
-    uint8_t ssbo_flip = 0;
     bool paused = true;
     auto prev_frame = std::chrono::steady_clock::now();
 
@@ -257,32 +260,28 @@ int main(void) {
             G.visualization = VISUALIZATION_CELL_KEY;
         }
         ImGui::End();
-
-        glBindBuffer(GL_SHADER_STORAGE_BUFFER, globals_ssbo);
-        glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(G), &G, GL_DYNAMIC_DRAW);
-        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, globals_ssbo);
+        glNamedBufferData(globals_ssbo, sizeof(G), &G, GL_DYNAMIC_DRAW);
 
         if (!paused) {
             for (auto shader : compute_pipeline) {
                 glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-                ssbo_flip = 1 - ssbo_flip;
-                glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, ssbo[ssbo_flip]);
-                glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, ssbo[1 - ssbo_flip]);
+                glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, input_particles);
+                glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, output_particles);
                 shader.dispatch_executions(G.object_count);
+                std::swap(input_particles, output_particles);
             }
         }
 
         particle_shader.use();
         particle_shader.uniform("view", camera.view());
         particle_shader.uniform("projection", camera.projection());
-        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, ssbo[ssbo_flip]);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, input_particles);
         glBindVertexArray(empty_vao);
         glDrawArraysInstanced(GL_POINTS, 0, 1, particles.size());
 
         box_shader.use();
         box_shader.uniform("view_projection", camera.view_projection());
         glBindVertexArray(box_vao);
-        glBindBuffer(GL_ARRAY_BUFFER, box_vbo);
         glDrawArrays(GL_LINES, 0, 24);
 
         ImGui::Render();
