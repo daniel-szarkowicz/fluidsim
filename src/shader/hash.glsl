@@ -1,3 +1,35 @@
+const ivec4 cell_neighbors[27] = ivec4[] (
+    ivec4( 1,  1,  1, 0),
+    ivec4( 1,  1,  0, 0),
+    ivec4( 1,  1, -1, 0),
+    ivec4( 1,  0,  1, 0),
+    ivec4( 1,  0,  0, 0),
+    ivec4( 1,  0, -1, 0),
+    ivec4( 1, -1,  1, 0),
+    ivec4( 1, -1,  0, 0),
+    ivec4( 1, -1, -1, 0),
+
+    ivec4( 0,  1,  1, 0),
+    ivec4( 0,  1,  0, 0),
+    ivec4( 0,  1, -1, 0),
+    ivec4( 0,  0,  1, 0),
+    ivec4( 0,  0,  0, 0),
+    ivec4( 0,  0, -1, 0),
+    ivec4( 0, -1,  1, 0),
+    ivec4( 0, -1,  0, 0),
+    ivec4( 0, -1, -1, 0),
+
+    ivec4(-1,  1,  1, 0),
+    ivec4(-1,  1,  0, 0),
+    ivec4(-1,  1, -1, 0),
+    ivec4(-1,  0,  1, 0),
+    ivec4(-1,  0,  0, 0),
+    ivec4(-1,  0, -1, 0),
+    ivec4(-1, -1,  1, 0),
+    ivec4(-1, -1,  0, 0),
+    ivec4(-1, -1, -1, 0)
+);
+
 uint hash(uint x) {
     x ^= x >> 17;
     x *= 0xed5ad4bbU;
@@ -22,5 +54,5 @@ uint cell_key(uint cell_hash) {
 }
 
 ivec4 cell_pos(vec4 pos) {
-    return ivec4(pos / G.smoothing_radius);
+    return ivec4(floor(pos / G.smoothing_radius));
 }

@@ -16,4 +16,9 @@ struct Globals {
     float pressure_multiplier;
     float collision_multiplier;
     uint key_count;
+
+    uint selected_index;
+    float _padding3;
+    float _padding4;
+    float _padding5;
 };

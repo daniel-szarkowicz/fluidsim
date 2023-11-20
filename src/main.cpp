@@ -204,7 +204,9 @@ int main(void) {
     G.target_density = 1.0;
     G.pressure_multiplier = 1.0;
     G.collision_multiplier = 0.9;
-    G.key_count = 256;
+    // ez a szimulációhoz lehet nagyobb, de így jobb a vizualizáció
+    G.key_count = 8*1024/4; // 8 KB / 4 B
+    G.selected_index = 0;
 
     uint8_t ssbo_flip = 0;
     bool paused = true;
@@ -239,6 +241,8 @@ int main(void) {
         ImGui::DragFloat("Targed density", &G.target_density, 0.001, 0.01, 10);
         ImGui::DragFloat("Pressure multiplier", &G.pressure_multiplier, 0.001, 0.01, 10);
         ImGui::DragFloat("Collision multiplier", &G.collision_multiplier, 0.01, 0.1, 1);
+        ImGui::Separator();
+        ImGui::DragInt("Selected particle", (int*)&G.selected_index, 0.1, 0, G.object_count-1);
         ImGui::End();
 
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, globals_ssbo);
