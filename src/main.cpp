@@ -106,6 +106,15 @@ int main(void) {
                             .fragment_file("src/shader/box_fragment.glsl")
                             .build();
 
+    ComputeShader generate_particles = ComputeShader::builder()
+                             .compute_source(version)
+                             .compute_file(particle)
+                             .compute_file(globals)
+                             .compute_file(globals_layout)
+                             .compute_file(hash)
+                             .compute_file("src/shader/generate_particles.glsl")
+                             .build();
+
     ComputeShader density = ComputeShader::builder()
                              .compute_source(version)
                              .compute_file(particle)
@@ -142,24 +151,6 @@ int main(void) {
         pressure_force,
     };
 
-    std::vector<Particle> particles(5000);
-    for (size_t i = 0; i < particles.size(); ++i) {
-        particles[i] = Particle{
-            // .position =
-            //     vec4(glm::linearRand(-3.0f, 3.0f), glm::linearRand(-3.0f, 3.0f),
-            //          glm::linearRand(-3.0f, 3.0f), 1),
-            // .velocity = glm::vec4(glm::ballRand(20.0f), 0.0f) *
-            //             glm::linearRand(0.5f, 1.0f),
-            .position =
-                vec4(glm::linearRand(-15.0f, 15.0f),
-                glm::linearRand(-8.0f, 8.0f), 0, 1),
-            // .velocity = glm::vec4(glm::circularRand(4.0f), 0, 0.0f) *
-            //             glm::linearRand(0.5f, 1.0f),
-            .velocity = vec4(0, 0, 0, 0),
-            .mass = 1.0f,
-        };
-    }
-
     GLuint empty_vao;
     glCreateVertexArrays(1, &empty_vao);
 
@@ -181,17 +172,6 @@ int main(void) {
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
 
-    GLuint input_particles;
-    GLuint output_particles;
-    glGenBuffers(1, &input_particles);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, input_particles);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, particles.size() * sizeof(Particle),
-                 &particles[0], GL_DYNAMIC_COPY);
-    glGenBuffers(1, &output_particles);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, output_particles);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, particles.size() * sizeof(Particle),
-                 NULL, GL_DYNAMIC_COPY);
-
     GLuint globals_ssbo;
     glGenBuffers(1, &globals_ssbo);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, globals_ssbo);
@@ -201,7 +181,7 @@ int main(void) {
     Globals G;
     G.gravity = vec4(0, 0, 0, 0);
     G.low_bound = vec3(-15, -8, -15);
-    G.object_count = particles.size();
+    G.object_count = 5000;
     G.high_bound = vec3(15, 8, 15);
     G.particle_size = 0.1;
     G.smoothing_radius = 1.0;
@@ -213,6 +193,24 @@ int main(void) {
     G.selected_index = 0;
     G.visualization = VISUALIZATION_DENSITY;
     G.density_color_multiplier = 1.0;
+
+    GLuint input_particles;
+    GLuint output_particles;
+    glGenBuffers(1, &input_particles);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, input_particles);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, G.object_count * sizeof(Particle),
+                 NULL, GL_DYNAMIC_COPY);
+    glGenBuffers(1, &output_particles);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, output_particles);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, G.object_count * sizeof(Particle),
+                 NULL, GL_DYNAMIC_COPY);
+
+    glNamedBufferData(globals_ssbo, sizeof(G), &G, GL_DYNAMIC_DRAW);
+    glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, input_particles);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, output_particles);
+    generate_particles.dispatch_executions(G.object_count);
+    std::swap(input_particles, output_particles);
 
     bool paused = true;
     auto prev_frame = std::chrono::steady_clock::now();
@@ -277,7 +275,7 @@ int main(void) {
         particle_shader.uniform("projection", camera.projection());
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, input_particles);
         glBindVertexArray(empty_vao);
-        glDrawArraysInstanced(GL_POINTS, 0, 1, particles.size());
+        glDrawArraysInstanced(GL_POINTS, 0, 1, G.object_count);
 
         box_shader.use();
         box_shader.uniform("view_projection", camera.view_projection());
