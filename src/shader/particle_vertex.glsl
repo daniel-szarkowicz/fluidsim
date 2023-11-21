@@ -4,6 +4,10 @@ layout(std430, binding = 3) readonly buffer points {
     Particle p[];
 };
 
+layout(std430, binding = 2) readonly buffer atomics {
+    uint key_counters[];
+};
+
 uniform mat4 view;
 
 out vec4 vColor;
@@ -61,8 +65,13 @@ void main() {
                 }
             }
         } break;
+        case VISUALIZATION_KEY_INDEX: {
+            float val = float(p[i].index_in_key + 1) / key_counters[p[i].cell_key];
+            vColor = vec4(val, 1, 0, 1);
+            vRadius = G.particle_size * 2 * val;
+        } break;
         default: {
-            vColor = vec4(1, 1, 0, 1);
+            vColor = vec4(1, 0, 1, 1);
         }
     }
 }

@@ -10,6 +10,10 @@ layout(std430, binding = 4) writeonly buffer outputs {
     Particle po[];
 };
 
+layout(std430, binding = 2) buffer atomics {
+    uint key_counters[];
+};
+
 float density_to_pressure(float density) {
     return (density - G.target_density) * G.pressure_multiplier;
 }
@@ -51,5 +55,6 @@ void main() {
     ivec4 cell_pos = cell_pos(particle.predicted_position);
     particle.cell_hash = cell_hash(cell_pos);
     particle.cell_key = cell_key(particle.cell_hash);
+    particle.index_in_key = atomicAdd(key_counters[particle.cell_key], 1);
     po[i] = particle;
 }

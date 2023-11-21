@@ -203,6 +203,11 @@ int main(void) {
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, input_particles);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, output_particles);
 
+    GLuint key_counters;
+    glGenBuffers(1, &key_counters);
+    glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, key_counters);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, key_counters);
+
     bool paused = true;
     bool generate = true;
     uint prev_object_count = 0;
@@ -230,6 +235,7 @@ int main(void) {
             generate = true;
             prev_object_count = 0;
         }
+        ImGui::SliderInt("Key count", (int*)&G.key_count, 1, 10000); 
         ImGui::Checkbox("Pause", &paused);
         ImGui::SeparatorText("Camera settings");
         ImGui::DragFloat("Camera yaw", &camera.yaw, 0.2, 0, 360);
@@ -257,6 +263,11 @@ int main(void) {
                               G.visualization == VISUALIZATION_CELL_KEY)
         ) {
             G.visualization = VISUALIZATION_CELL_KEY;
+        }
+        if(ImGui::RadioButton("Visualize key index",
+                              G.visualization == VISUALIZATION_KEY_INDEX)
+        ) {
+            G.visualization = VISUALIZATION_KEY_INDEX;
         }
         ImGui::End();
         glNamedBufferData(globals_ssbo, sizeof(G), &G, GL_DYNAMIC_DRAW);
@@ -291,12 +302,27 @@ int main(void) {
         }
 
         if (!paused) {
+            auto key_counters_data = std::vector<uint>(G.key_count, 0);
+            glNamedBufferData(
+                key_counters,
+                key_counters_data.size() * sizeof(GLuint),
+                &key_counters_data[0], GL_DYNAMIC_READ
+            );
             for (auto shader : compute_pipeline) {
                 glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
                 glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, input_particles);
                 glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, output_particles);
                 shader.dispatch_executions(G.object_count);
                 std::swap(input_particles, output_particles);
+            }
+            glGetNamedBufferSubData(
+                key_counters, 0,
+                key_counters_data.size() * sizeof(GLuint),
+                &key_counters_data[0]
+            );
+            auto key_indicies = std::vector<uint>(G.key_count + 1, 0);
+            for (uint i = 1; i < G.key_count + 1; ++i) {
+                key_indicies[i] = key_indicies[i-1] + key_counters_data[i-1];
             }
         }
 
