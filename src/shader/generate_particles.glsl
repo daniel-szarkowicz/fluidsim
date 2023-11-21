@@ -20,6 +20,7 @@ void main() {
 
     if (i < prev_object_count) {
         po[i] = p[i];
+        po[i].id = i;
         return;
     }
 
@@ -32,4 +33,5 @@ void main() {
 
     po[i].velocity = vec4(0, 0, 0, 0);
     po[i].mass = 1;
+    po[i].id = i;
 }

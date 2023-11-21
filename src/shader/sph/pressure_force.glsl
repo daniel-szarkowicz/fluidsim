@@ -21,7 +21,7 @@ void main() {
     }
     vec4 pressure_force = vec4(0, 0, 0, 0);
     for_neighbor(p[i], neighbor, {
-        if (i != _i_) {
+        if (p[i].id != neighbor.id) {
             float distance = distance(p[i].predicted_position, neighbor.predicted_position);
             vec4 dir = (p[i].predicted_position - neighbor.predicted_position)/distance;
             if (distance == 0.0) {
