@@ -17,6 +17,7 @@ void main() {
     uint i = gl_InstanceID;
     gl_Position = view * p[i].position;
     vRadius = G.particle_size;
+    vColor = vec4(1, 0, 1, 1);
 
     switch(G.visualization) {
         case VISUALIZATION_DENSITY: {
@@ -37,6 +38,9 @@ void main() {
             }
         } break;
         case VISUALIZATION_CELL_KEY: {
+            if (G.selected_index >= G.object_count) {
+                return;
+            }
             if(G.selected_index == i) {
                 vColor = vec4(0, 0, 1, 1);
             } else {
@@ -70,8 +74,5 @@ void main() {
             vColor = vec4(val, 1, 0, 1);
             vRadius = G.particle_size * 2 * val;
         } break;
-        default: {
-            vColor = vec4(1, 0, 1, 1);
-        }
     }
 }
