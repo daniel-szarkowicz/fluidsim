@@ -265,7 +265,6 @@ int main(void) {
                 glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
                 glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, input_particles);
                 glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, output_particles);
-                generate_particles.use();
                 generate_particles.uniform("prev_object_count", prev_object_count);
                 generate_particles.dispatch_executions(
                     G.object_count

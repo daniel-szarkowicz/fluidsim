@@ -119,76 +119,75 @@ void ComputeShader::dispatch_executions(GLuint x, GLuint y, GLuint z) {
     template <> void Shader::uniform(const char* name, __VA_ARGS__) {          \
         GLint loc = glGetUniformLocation(program_id, name);                    \
         if (loc == -1) {                                                       \
-            throw std::invalid_argument(                                       \
-                std::string("Invalid uniform name: `") + name + "` !");        \
+            fprintf(stderr, "Invalid uniform name: %s", name);                 \
         }
 #define su_end(uniform, ...)                                                   \
-    uniform(loc, __VA_ARGS__);                                                 \
+    glProgramUniform##uniform(program_id, loc, __VA_ARGS__);                   \
     }
 
 su_start(GLfloat v0);
-su_end(glUniform1f, v0);
+su_end(1f, v0);
 su_start(GLfloat v0, GLfloat v1);
-su_end(glUniform2f, v0, v1);
+su_end(2f, v0, v1);
 su_start(GLfloat v0, GLfloat v1, GLfloat v2);
-su_end(glUniform3f, v0, v1, v2);
+su_end(3f, v0, v1, v2);
 su_start(GLfloat v0, GLfloat v1, GLfloat v2, GLfloat v3);
-su_end(glUniform4f, v0, v1, v2, v3);
+su_end(4f, v0, v1, v2, v3);
 su_start(GLint v0);
-su_end(glUniform1i, v0);
+su_end(1i, v0);
 su_start(GLint v0, GLint v1);
-su_end(glUniform2i, v0, v1);
+su_end(2i, v0, v1);
 su_start(GLint v0, GLint v1, GLint v2);
-su_end(glUniform3i, v0, v1, v2);
+su_end(3i, v0, v1, v2);
 su_start(GLint v0, GLint v1, GLint v2, GLint v3);
-su_end(glUniform4i, v0, v1, v2, v3);
+su_end(4i, v0, v1, v2, v3);
 su_start(GLuint v0);
-su_end(glUniform1ui, v0);
+su_end(1ui, v0);
 su_start(GLuint v0, GLuint v1);
-su_end(glUniform2ui, v0, v1);
+su_end(2ui, v0, v1);
 su_start(GLuint v0, GLuint v1, GLuint v2);
-su_end(glUniform3ui, v0, v1, v2);
+su_end(3ui, v0, v1, v2);
 su_start(GLuint v0, GLuint v1, GLuint v2, GLuint v3);
-su_end(glUniform4ui, v0, v1, v2, v3);
+su_end(4ui, v0, v1, v2, v3);
 // su_start(glm::vec1 v);
-// su_end(glUniform1fv, 1, glm::value_ptr(v));
+// su_end(1fv, 1, glm::value_ptr(v));
 su_start(glm::vec2 v);
-su_end(glUniform2fv, 1, glm::value_ptr(v));
+su_end(2fv, 1, glm::value_ptr(v));
 su_start(glm::vec3 v);
-su_end(glUniform3fv, 1, glm::value_ptr(v));
+su_end(3fv, 1, glm::value_ptr(v));
 su_start(glm::vec4 v);
-su_end(glUniform4fv, 1, glm::value_ptr(v));
+su_end(4fv, 1, glm::value_ptr(v));
 // su_start(glm::vec<1, GLint> v);
-// su_end(glUniform1iv, 1, glm::value_ptr(v));
+// su_end(1iv, 1, glm::value_ptr(v));
 su_start(glm::vec<2, GLint> v);
-su_end(glUniform2iv, 1, glm::value_ptr(v));
+su_end(2iv, 1, glm::value_ptr(v));
 su_start(glm::vec<3, GLint> v);
-su_end(glUniform3iv, 1, glm::value_ptr(v));
+su_end(3iv, 1, glm::value_ptr(v));
 su_start(glm::vec<4, GLint> v);
-su_end(glUniform4iv, 1, glm::value_ptr(v));
+su_end(4iv, 1, glm::value_ptr(v));
 // su_start(glm::vec<1, GLuint> v);
-// su_end(glUniform1uiv, 1, glm::value_ptr(v));
+// su_end(1uiv, 1, glm::value_ptr(v));
 su_start(glm::vec<2, GLuint> v);
-su_end(glUniform2uiv, 1, glm::value_ptr(v));
+su_end(2uiv, 1, glm::value_ptr(v));
 su_start(glm::vec<3, GLuint> v);
-su_end(glUniform3uiv, 1, glm::value_ptr(v));
+su_end(3uiv, 1, glm::value_ptr(v));
 su_start(glm::vec<4, GLuint> v);
-su_end(glUniform4uiv, 1, glm::value_ptr(v));
+su_end(4uiv, 1, glm::value_ptr(v));
 su_start(glm::mat2x2 v);
-su_end(glUniformMatrix2fv, 1, GL_FALSE, glm::value_ptr(v));
+su_end(Matrix2fv, 1, GL_FALSE, glm::value_ptr(v));
 su_start(glm::mat3x3 v);
-su_end(glUniformMatrix3fv, 1, GL_FALSE, glm::value_ptr(v));
+su_end(Matrix3fv, 1, GL_FALSE, glm::value_ptr(v));
 su_start(glm::mat4x4 v);
-su_end(glUniformMatrix4fv, 1, GL_FALSE, glm::value_ptr(v));
+su_end(Matrix4fv, 1, GL_FALSE, glm::value_ptr(v));
 su_start(glm::mat2x3 v);
-su_end(glUniformMatrix2x3fv, 1, GL_FALSE, glm::value_ptr(v));
+su_end(Matrix2x3fv, 1, GL_FALSE, glm::value_ptr(v));
 su_start(glm::mat3x2 v);
-su_end(glUniformMatrix3x2fv, 1, GL_FALSE, glm::value_ptr(v));
+su_end(Matrix3x2fv, 1, GL_FALSE, glm::value_ptr(v));
 su_start(glm::mat2x4 v);
-su_end(glUniformMatrix2x4fv, 1, GL_FALSE, glm::value_ptr(v));
+su_end(Matrix2x4fv, 1, GL_FALSE, glm::value_ptr(v));
 su_start(glm::mat4x2 v);
-su_end(glUniformMatrix4x2fv, 1, GL_FALSE, glm::value_ptr(v));
+su_end(Matrix4x2fv, 1, GL_FALSE, glm::value_ptr(v));
 su_start(glm::mat3x4 v);
-su_end(glUniformMatrix3x4fv, 1, GL_FALSE, glm::value_ptr(v));
+su_end(Matrix3x4fv, 1, GL_FALSE, glm::value_ptr(v));
 su_start(glm::mat4x3 v);
-su_end(glUniformMatrix4x3fv, 1, GL_FALSE, glm::value_ptr(v));
+su_end(Matrix4x3fv, 1, GL_FALSE, glm::value_ptr(v));
