@@ -115,6 +115,16 @@ int main(void) {
                              .compute_file("src/shader/generate_particles.glsl")
                              .build();
 
+    ComputeShader predict_and_hash = ComputeShader::builder()
+                             .compute_source(version)
+                             .compute_file(particle)
+                             .compute_file(globals)
+                             .compute_file(globals_layout)
+                             .compute_file(hash)
+                             .compute_file(kernel)
+                             .compute_file("src/shader/sph/predict_and_hash.glsl")
+                             .build();
+
     ComputeShader density = ComputeShader::builder()
                              .compute_source(version)
                              .compute_file(particle)
@@ -148,9 +158,9 @@ int main(void) {
                              .build();
 
     ComputeShader compute_pipeline[] = {
-        update_position,
         density,
         pressure_force,
+        update_position,
     };
 
     GLuint empty_vao;
@@ -301,28 +311,34 @@ int main(void) {
             generate = false;
         }
 
+        auto key_counters_data = std::vector<uint>(G.key_count, 0);
+        glNamedBufferData(
+            key_counters,
+            key_counters_data.size() * sizeof(GLuint),
+            &key_counters_data[0], GL_DYNAMIC_READ
+        );
+        glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, input_particles);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, output_particles);
+        predict_and_hash.dispatch_executions(G.object_count);
+        std::swap(input_particles, output_particles);
+        glGetNamedBufferSubData(
+            key_counters, 0,
+            key_counters_data.size() * sizeof(GLuint),
+            &key_counters_data[0]
+        );
+        auto key_indicies = std::vector<uint>(G.key_count + 1, 0);
+        for (uint i = 1; i < G.key_count + 1; ++i) {
+            key_indicies[i] = key_indicies[i-1] + key_counters_data[i-1];
+        }
         if (!paused) {
-            auto key_counters_data = std::vector<uint>(G.key_count, 0);
-            glNamedBufferData(
-                key_counters,
-                key_counters_data.size() * sizeof(GLuint),
-                &key_counters_data[0], GL_DYNAMIC_READ
-            );
+
             for (auto shader : compute_pipeline) {
                 glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
                 glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, input_particles);
                 glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, output_particles);
                 shader.dispatch_executions(G.object_count);
                 std::swap(input_particles, output_particles);
-            }
-            glGetNamedBufferSubData(
-                key_counters, 0,
-                key_counters_data.size() * sizeof(GLuint),
-                &key_counters_data[0]
-            );
-            auto key_indicies = std::vector<uint>(G.key_count + 1, 0);
-            for (uint i = 1; i < G.key_count + 1; ++i) {
-                key_indicies[i] = key_indicies[i-1] + key_counters_data[i-1];
             }
         }
 
