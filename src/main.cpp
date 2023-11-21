@@ -125,6 +125,15 @@ int main(void) {
                              .compute_file("src/shader/sph/predict_and_hash.glsl")
                              .build();
 
+    ComputeShader bucket_sort = ComputeShader::builder()
+                             .compute_source(version)
+                             .compute_file(particle)
+                             .compute_file(globals)
+                             .compute_file(globals_layout)
+                             .compute_file(hash)
+                             .compute_file(kernel)
+                             .compute_file("src/shader/sph/bucket_sort.glsl")
+                             .build();
     ComputeShader density = ComputeShader::builder()
                              .compute_source(version)
                              .compute_file(particle)
@@ -331,6 +340,16 @@ int main(void) {
         for (uint i = 1; i < G.key_count + 1; ++i) {
             key_indicies[i] = key_indicies[i-1] + key_counters_data[i-1];
         }
+        glNamedBufferData(
+            key_counters,
+            key_indicies.size() * sizeof(GLuint),
+            &key_indicies[0], GL_DYNAMIC_DRAW
+        );
+        glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, input_particles);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, output_particles);
+        bucket_sort.dispatch_executions(G.object_count);
+        std::swap(input_particles, output_particles);
         if (!paused) {
 
             for (auto shader : compute_pipeline) {
