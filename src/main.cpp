@@ -82,6 +82,7 @@ int main(void) {
     const char* globals_layout = "src/shader/globals_layout.glsl";
     const char* hash = "src/shader/hash.glsl";
     const char* kernel = "src/shader/sph/kernel.glsl";
+    const char* for_neighbor = "src/shader/for_neighbor.glsl";
 
     GraphicsShader particle_shader = GraphicsShader::builder()
                                .vertex_source(version)
@@ -121,6 +122,7 @@ int main(void) {
                              .compute_file(globals_layout)
                              .compute_file(hash)
                              .compute_file(kernel)
+                             .compute_file(for_neighbor)
                              .compute_file("src/shader/sph/density.glsl")
                              .build();
 
@@ -131,6 +133,7 @@ int main(void) {
                              .compute_file(globals_layout)
                              .compute_file(hash)
                              .compute_file(kernel)
+                             .compute_file(for_neighbor)
                              .compute_file("src/shader/sph/pressure_force.glsl")
                              .build();
 
@@ -220,7 +223,7 @@ int main(void) {
         ImGui::NewFrame();
         ImGui::Begin("Settings");
         ImGui::Text("FPS: %2.2f", ImGui::GetIO().Framerate);
-        if(ImGui::SliderInt("Particle count", (int*)&G.object_count, 1, 6000)) {
+        if(ImGui::SliderInt("Particle count", (int*)&G.object_count, 1, 10000)) {
             generate = true;
         }
         if(ImGui::Button("Restart")) {

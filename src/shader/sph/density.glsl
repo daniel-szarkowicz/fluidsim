@@ -16,10 +16,10 @@ void main() {
         return;
     }
     float density = 0;
-    for (uint j = 0; j < G.object_count; ++j) {
-        float distance = distance(p[i].predicted_position, p[j].predicted_position);
-        density += p[j].mass * kernel(distance);
-    }
+    for_neighbor(p[i], neighbor, {
+        float distance = distance(p[i].predicted_position, neighbor.predicted_position);
+        density += neighbor.mass * kernel(distance);
+    });
     Particle particle = p[i];
     particle.density = density;
     po[i] = particle;
