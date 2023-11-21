@@ -95,7 +95,6 @@ int main(void) {
                                .fragment_source(version)
                                .fragment_file("src/shader/particle_fragment.glsl")
                                .build();
-    printf("particle_shader\n");
 
     GraphicsShader box_shader = GraphicsShader::builder()
                             .vertex_source(version)
@@ -197,22 +196,14 @@ int main(void) {
     GLuint input_particles;
     GLuint output_particles;
     glGenBuffers(1, &input_particles);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, input_particles);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, G.object_count * sizeof(Particle),
-                 NULL, GL_DYNAMIC_COPY);
     glGenBuffers(1, &output_particles);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, input_particles);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, output_particles);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, G.object_count * sizeof(Particle),
-                 NULL, GL_DYNAMIC_COPY);
-
-    glNamedBufferData(globals_ssbo, sizeof(G), &G, GL_DYNAMIC_DRAW);
-    glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, input_particles);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, output_particles);
-    generate_particles.dispatch_executions(G.object_count);
-    std::swap(input_particles, output_particles);
 
     bool paused = true;
+    bool generate = true;
+    uint prev_object_count = 0;
+    uint object_buffer_size = 0;
     auto prev_frame = std::chrono::steady_clock::now();
 
     while (!glfwWindowShouldClose(window)) {
@@ -229,6 +220,9 @@ int main(void) {
         ImGui::NewFrame();
         ImGui::Begin("Settings");
         ImGui::Text("FPS: %2.2f", ImGui::GetIO().Framerate);
+        if(ImGui::SliderInt("Particle count", (int*)&G.object_count, 1, 6000)) {
+            generate = true;
+        }
         ImGui::Checkbox("Pause", &paused);
         ImGui::SeparatorText("Camera settings");
         ImGui::DragFloat("Camera yaw", &camera.yaw, 0.2, 0, 360);
@@ -260,6 +254,36 @@ int main(void) {
         ImGui::End();
         glNamedBufferData(globals_ssbo, sizeof(G), &G, GL_DYNAMIC_DRAW);
 
+        if (generate) {
+            if (object_buffer_size < G.object_count) {
+                glNamedBufferData(
+                    output_particles, G.object_count * sizeof(Particle),
+                    NULL, GL_DYNAMIC_COPY
+                );
+            }
+            if (prev_object_count < G.object_count) {
+                glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+                glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, input_particles);
+                glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, output_particles);
+                generate_particles.use();
+                generate_particles.uniform("prev_object_count", prev_object_count);
+                generate_particles.dispatch_executions(
+                    G.object_count
+                );
+                std::swap(input_particles, output_particles);
+            }
+            prev_object_count = G.object_count;
+            if (object_buffer_size < G.object_count) {
+                glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+                glNamedBufferData(
+                    output_particles, G.object_count * sizeof(Particle),
+                    NULL, GL_DYNAMIC_COPY
+                );
+                object_buffer_size = G.object_count;
+            }
+            generate = false;
+        }
+
         if (!paused) {
             for (auto shader : compute_pipeline) {
                 glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
@@ -273,6 +297,7 @@ int main(void) {
         particle_shader.use();
         particle_shader.uniform("view", camera.view());
         particle_shader.uniform("projection", camera.projection());
+        glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, input_particles);
         glBindVertexArray(empty_vao);
         glDrawArraysInstanced(GL_POINTS, 0, 1, G.object_count);
