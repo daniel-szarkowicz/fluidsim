@@ -223,6 +223,10 @@ int main(void) {
         if(ImGui::SliderInt("Particle count", (int*)&G.object_count, 1, 6000)) {
             generate = true;
         }
+        if(ImGui::Button("Restart")) {
+            generate = true;
+            prev_object_count = 0;
+        }
         ImGui::Checkbox("Pause", &paused);
         ImGui::SeparatorText("Camera settings");
         ImGui::DragFloat("Camera yaw", &camera.yaw, 0.2, 0, 360);
