@@ -25,6 +25,6 @@ void main() {
     ivec4 cell_pos = cell_pos(particle.predicted_position);
     particle.cell_hash = cell_hash(cell_pos);
     particle.cell_key = cell_key(particle.cell_hash);
-    particle.index_in_key = atomicAdd(key_counters[particle.cell_key], 1);
+    particle.index_in_key = atomicAdd(key_counters[particle.cell_key + 1], 1);
     po[i] = particle;
 }

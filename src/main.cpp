@@ -322,31 +322,48 @@ int main(void) {
         }
 
         if (G.key_count > 0) {
-            auto key_counters_data = std::vector<uint>(G.key_count, 0);
+            // zero fill input key counts
+            auto key_data_in = std::vector<uint>(G.key_count + 1, 0);
+            auto key_data_out = std::vector<uint>(G.key_count + 1);
             glNamedBufferData(
                 key_counters,
-                key_counters_data.size() * sizeof(GLuint),
-                &key_counters_data[0], GL_DYNAMIC_READ
+                key_data_in.size() * sizeof(GLuint),
+                &key_data_in[0], GL_DYNAMIC_READ
             );
+
+            // count keys
             glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
             glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, input_particles);
             glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, output_particles);
             predict_and_hash.dispatch_executions(G.object_count);
             std::swap(input_particles, output_particles);
+
+            // calculate keys indicies
             glGetNamedBufferSubData(
                 key_counters, 0,
-                key_counters_data.size() * sizeof(GLuint),
-                &key_counters_data[0]
+                key_data_out.size() * sizeof(GLuint),
+                &key_data_out[0]
             );
-            auto key_indicies = std::vector<uint>(G.key_count + 1, 0);
-            for (uint i = 1; i < G.key_count + 1; ++i) {
-                key_indicies[i] = key_indicies[i-1] + key_counters_data[i-1];
+            std::swap(key_data_in, key_data_out);
+            for (uint offset = 1; offset < key_data_in.size(); offset *= 2) {
+                #pragma omp parallel for
+                for (uint i = 0; i < key_data_out.size(); ++i) {
+                    if (i < offset) {
+                        key_data_out[i] = key_data_in[i];
+                    } else {
+                        key_data_out[i] = key_data_in[i-offset] + key_data_in[i];
+                    }
+                }
+                std::swap(key_data_in, key_data_out);
             }
             glNamedBufferData(
                 key_counters,
-                key_indicies.size() * sizeof(GLuint),
-                &key_indicies[0], GL_DYNAMIC_DRAW
+                key_data_in.size() * sizeof(GLuint),
+                &key_data_in[0], GL_DYNAMIC_DRAW
             );
+
+
+            // bucket sort using key indicies
             glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
             glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, input_particles);
             glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, output_particles);
