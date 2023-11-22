@@ -320,36 +320,38 @@ int main(void) {
             generate = false;
         }
 
-        auto key_counters_data = std::vector<uint>(G.key_count, 0);
-        glNamedBufferData(
-            key_counters,
-            key_counters_data.size() * sizeof(GLuint),
-            &key_counters_data[0], GL_DYNAMIC_READ
-        );
-        glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, input_particles);
-        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, output_particles);
-        predict_and_hash.dispatch_executions(G.object_count);
-        std::swap(input_particles, output_particles);
-        glGetNamedBufferSubData(
-            key_counters, 0,
-            key_counters_data.size() * sizeof(GLuint),
-            &key_counters_data[0]
-        );
-        auto key_indicies = std::vector<uint>(G.key_count + 1, 0);
-        for (uint i = 1; i < G.key_count + 1; ++i) {
-            key_indicies[i] = key_indicies[i-1] + key_counters_data[i-1];
+        if (G.key_count > 0) {
+            auto key_counters_data = std::vector<uint>(G.key_count, 0);
+            glNamedBufferData(
+                key_counters,
+                key_counters_data.size() * sizeof(GLuint),
+                &key_counters_data[0], GL_DYNAMIC_READ
+            );
+            glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+            glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, input_particles);
+            glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, output_particles);
+            predict_and_hash.dispatch_executions(G.object_count);
+            std::swap(input_particles, output_particles);
+            glGetNamedBufferSubData(
+                key_counters, 0,
+                key_counters_data.size() * sizeof(GLuint),
+                &key_counters_data[0]
+            );
+            auto key_indicies = std::vector<uint>(G.key_count + 1, 0);
+            for (uint i = 1; i < G.key_count + 1; ++i) {
+                key_indicies[i] = key_indicies[i-1] + key_counters_data[i-1];
+            }
+            glNamedBufferData(
+                key_counters,
+                key_indicies.size() * sizeof(GLuint),
+                &key_indicies[0], GL_DYNAMIC_DRAW
+            );
+            glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+            glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, input_particles);
+            glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, output_particles);
+            bucket_sort.dispatch_executions(G.object_count);
+            std::swap(input_particles, output_particles);
         }
-        glNamedBufferData(
-            key_counters,
-            key_indicies.size() * sizeof(GLuint),
-            &key_indicies[0], GL_DYNAMIC_DRAW
-        );
-        glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, input_particles);
-        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, output_particles);
-        bucket_sort.dispatch_executions(G.object_count);
-        std::swap(input_particles, output_particles);
         if (!paused) {
 
             for (auto shader : compute_pipeline) {

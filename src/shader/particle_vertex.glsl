@@ -18,6 +18,9 @@ void main() {
     gl_Position = view * p[i].position;
     vRadius = G.particle_size;
     vColor = vec4(1, 0, 1, 1);
+    if (G.key_count == 0) {
+        return;
+    }
 
     switch(G.visualization) {
         case VISUALIZATION_DENSITY: {
