@@ -116,6 +116,13 @@ int main(void) {
                              .compute_file("src/shader/generate_particles.glsl")
                              .build();
 
+    ComputeShader clear_keys = ComputeShader::builder()
+                             .compute_source(version)
+                             .compute_file(globals)
+                             .compute_file(globals_layout)
+                             .compute_file("src/shader/sph/clear_keys.glsl")
+                             .build();
+
     ComputeShader predict_and_hash = ComputeShader::builder()
                              .compute_source(version)
                              .compute_file(particle)
@@ -124,6 +131,13 @@ int main(void) {
                              .compute_file(hash)
                              .compute_file(kernel)
                              .compute_file("src/shader/sph/predict_and_hash.glsl")
+                             .build();
+
+    ComputeShader prefix_sum = ComputeShader::builder()
+                             .compute_source(version)
+                             .compute_file(globals)
+                             .compute_file(globals_layout)
+                             .compute_file("src/shader/sph/prefix_sum.glsl")
                              .build();
 
     ComputeShader bucket_sort = ComputeShader::builder()
@@ -223,10 +237,12 @@ int main(void) {
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, input_particles);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, output_particles);
 
-    GLuint key_counters;
-    glGenBuffers(1, &key_counters);
-    glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, key_counters);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, key_counters);
+    GLuint input_keys;
+    GLuint output_keys;
+    glGenBuffers(1, &input_keys);
+    glGenBuffers(1, &output_keys);
+    glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, input_keys);
+    glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, output_keys);
 
     bool paused = true;
     bool generate = true;
@@ -322,14 +338,20 @@ int main(void) {
         }
 
         if (G.key_count > 0) {
-            // zero fill input key counts
-            auto key_data_in = std::vector<uint>(G.key_count + 1, 0);
-            auto key_data_out = std::vector<uint>(G.key_count + 1);
+            // TODO: optimize
             glNamedBufferData(
-                key_counters,
-                key_data_in.size() * sizeof(GLuint),
-                &key_data_in[0], GL_DYNAMIC_READ
+                input_keys, (G.key_count + 1) * sizeof(uint),
+                NULL, GL_DYNAMIC_COPY
             );
+            glNamedBufferData(
+                output_keys, (G.key_count + 1) * sizeof(uint),
+                NULL, GL_DYNAMIC_COPY
+            );
+
+            // zero fill input key counts
+            glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+            glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, input_keys);
+            clear_keys.dispatch_executions(G.key_count + 1);
 
             // count keys
             glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
@@ -338,33 +360,19 @@ int main(void) {
             predict_and_hash.dispatch_executions(G.object_count);
             std::swap(input_particles, output_particles);
 
-            // calculate keys indicies
-            glGetNamedBufferSubData(
-                key_counters, 0,
-                key_data_out.size() * sizeof(GLuint),
-                &key_data_out[0]
-            );
-            std::swap(key_data_in, key_data_out);
-            for (uint offset = 1; offset < key_data_in.size(); offset *= 2) {
-                #pragma omp parallel for
-                for (uint i = 0; i < key_data_out.size(); ++i) {
-                    if (i < offset) {
-                        key_data_out[i] = key_data_in[i];
-                    } else {
-                        key_data_out[i] = key_data_in[i-offset] + key_data_in[i];
-                    }
-                }
-                std::swap(key_data_in, key_data_out);
+            // calculate key indicies
+            for (uint offset = 1; offset < G.key_count + 1; offset *= 2) {
+                glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+                glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, input_keys);
+                glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, output_keys);
+                prefix_sum.uniform("offset", offset);
+                prefix_sum.dispatch_executions(G.key_count + 1);
+                std::swap(input_keys, output_keys);
             }
-            glNamedBufferData(
-                key_counters,
-                key_data_in.size() * sizeof(GLuint),
-                &key_data_in[0], GL_DYNAMIC_DRAW
-            );
-
 
             // bucket sort using key indicies
             glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+            glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, input_keys);
             glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, input_particles);
             glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, output_particles);
             bucket_sort.dispatch_executions(G.object_count);
