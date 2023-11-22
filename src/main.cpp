@@ -90,6 +90,7 @@ int main(void) {
                                .vertex_file(globals)
                                .vertex_file(globals_layout)
                                .vertex_file(hash)
+                               .vertex_file(for_neighbor)
                                .vertex_file("src/shader/particle_vertex.glsl")
                                .geometry_source(version)
                                .geometry_file("src/shader/particle_geometry.glsl")
@@ -247,14 +248,14 @@ int main(void) {
         ImGui::NewFrame();
         ImGui::Begin("Settings");
         ImGui::Text("FPS: %2.2f", ImGui::GetIO().Framerate);
-        if(ImGui::SliderInt("Particle count", (int*)&G.object_count, 1, 10000)) {
+        if(ImGui::SliderInt("Particle count", (int*)&G.object_count, 1, 100000)) {
             generate = true;
         }
         if(ImGui::Button("Restart")) {
             generate = true;
             prev_object_count = 0;
         }
-        ImGui::SliderInt("Key count", (int*)&G.key_count, 1, 10000); 
+        ImGui::SliderInt("Key count", (int*)&G.key_count, 10, 100000);
         ImGui::Checkbox("Pause", &paused);
         ImGui::SeparatorText("Camera settings");
         ImGui::DragFloat("Camera yaw", &camera.yaw, 0.2, 0, 360);
@@ -278,15 +279,15 @@ int main(void) {
         ) {
             G.visualization = VISUALIZATION_DENSITY;
         }
-        if(ImGui::RadioButton("Visualize cell key",
-                              G.visualization == VISUALIZATION_CELL_KEY)
+        if(ImGui::RadioButton("Visualize cell key (expected)",
+                              G.visualization == VISUALIZATION_CELL_KEY_EXPECTED)
         ) {
-            G.visualization = VISUALIZATION_CELL_KEY;
+            G.visualization = VISUALIZATION_CELL_KEY_EXPECTED;
         }
-        if(ImGui::RadioButton("Visualize key index",
-                              G.visualization == VISUALIZATION_KEY_INDEX)
+        if(ImGui::RadioButton("Visualize cell key (actual)",
+                              G.visualization == VISUALIZATION_CELL_KEY_ACTUAL)
         ) {
-            G.visualization = VISUALIZATION_KEY_INDEX;
+            G.visualization = VISUALIZATION_CELL_KEY_ACTUAL;
         }
         ImGui::End();
         glNamedBufferData(globals_ssbo, sizeof(G), &G, GL_DYNAMIC_DRAW);

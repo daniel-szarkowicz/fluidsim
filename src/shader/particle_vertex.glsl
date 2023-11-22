@@ -4,8 +4,8 @@ layout(std430, binding = 3) readonly buffer points {
     Particle p[];
 };
 
-layout(std430, binding = 2) readonly buffer atomics {
-    uint key_counters[];
+layout(std430, binding = 2) readonly buffer keys {
+    uint key_map[];
 };
 
 uniform mat4 view;
@@ -40,7 +40,7 @@ void main() {
                 );
             }
         } break;
-        case VISUALIZATION_CELL_KEY: {
+        case VISUALIZATION_CELL_KEY_EXPECTED: {
             if (G.selected_index >= G.object_count) {
                 return;
             }
@@ -72,10 +72,32 @@ void main() {
                 }
             }
         } break;
-        case VISUALIZATION_KEY_INDEX: {
-            float val = float(p[i].index_in_key + 1) / key_counters[p[i].cell_key];
-            vColor = vec4(val, 1, 0, 1);
-            vRadius = G.particle_size * 2 * val;
+        case VISUALIZATION_CELL_KEY_ACTUAL: {
+            if (G.selected_index >= G.object_count) {
+                return;
+            }
+            if(G.selected_index == i) {
+                vColor = vec4(0, 0, 1, 1);
+            } else {
+                Particle s = p[G.selected_index];
+                vColor = vec4(0, 0, 0, 1);
+                bool colored = false;
+                for_neighbor_unchecked(s, neighbor, {
+                    if (neighbor.id == p[i].id) {
+                        vColor.r = 1;
+                        colored = true;
+                    }
+                });
+                for_neighbor(s, neighbor, {
+                    if (neighbor.id == p[i].id) {
+                        vColor.g = 1;
+                        colored = true;
+                    }
+                });
+                if (!colored) {
+                    vColor = vec4(1, 0, 1, 1);
+                }
+            }
         } break;
     }
 }

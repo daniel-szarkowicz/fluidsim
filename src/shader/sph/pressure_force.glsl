@@ -10,6 +10,10 @@ layout(std430, binding = 4) writeonly buffer outputs {
     Particle po[];
 };
 
+layout(std430, binding = 2) readonly buffer keys {
+    uint key_map[];
+};
+
 float density_to_pressure(float density) {
     return (density - G.target_density) * G.pressure_multiplier;
 }

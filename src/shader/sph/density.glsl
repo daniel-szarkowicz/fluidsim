@@ -10,6 +10,10 @@ layout(std430, binding = 4) writeonly buffer outputs {
     Particle po[];
 };
 
+layout(std430, binding = 2) readonly buffer keys {
+    uint key_map[];
+};
+
 void main() {
     uint i = gl_GlobalInvocationID.x;
     if (i >= G.object_count) {
