@@ -16,7 +16,7 @@ void main() {
         return;
     }
     Particle particle = p[i];
-    particle.velocity += G.gravity * G.delta_time;
+    particle.velocity += G.gravity * G.delta_time / particle.density;
     particle.position += particle.velocity * G.delta_time;
     if (particle.position.x > G.high_bound.x) {
         particle.position.x = G.high_bound.x;
