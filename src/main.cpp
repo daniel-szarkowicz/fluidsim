@@ -244,10 +244,14 @@ int main(void) {
     glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, input_keys);
     glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, output_keys);
 
-    bool paused = true;
-    bool generate = true;
+    bool object_buffer_regenerate = true;
     uint prev_object_count = 0;
     uint object_buffer_size = 0;
+
+    bool key_buffer_regenerate = true;
+    uint key_buffer_size = 0;
+
+    bool paused = true;
     auto prev_frame = std::chrono::steady_clock::now();
 
     while (!glfwWindowShouldClose(window)) {
@@ -265,13 +269,15 @@ int main(void) {
         ImGui::Begin("Settings");
         ImGui::Text("FPS: %2.2f", ImGui::GetIO().Framerate);
         if(ImGui::SliderInt("Particle count", (int*)&G.object_count, 1, 100000)) {
-            generate = true;
+            object_buffer_regenerate = true;
         }
         if(ImGui::Button("Restart")) {
-            generate = true;
+            object_buffer_regenerate = true;
             prev_object_count = 0;
         }
-        ImGui::SliderInt("Key count", (int*)&G.key_count, 10, 100000);
+        if(ImGui::SliderInt("Key count", (int*)&G.key_count, 10, 100000)) {
+            key_buffer_regenerate = true;
+        }
         ImGui::Checkbox("Pause", &paused);
         ImGui::SeparatorText("Camera settings");
         ImGui::DragFloat("Camera yaw", &camera.yaw, 0.2, 0, 360);
@@ -308,7 +314,7 @@ int main(void) {
         ImGui::End();
         glNamedBufferData(globals_ssbo, sizeof(G), &G, GL_DYNAMIC_DRAW);
 
-        if (generate) {
+        if (object_buffer_regenerate) {
             if (object_buffer_size < G.object_count) {
                 glNamedBufferData(
                     output_particles, G.object_count * sizeof(Particle),
@@ -334,20 +340,25 @@ int main(void) {
                 );
                 object_buffer_size = G.object_count;
             }
-            generate = false;
+            object_buffer_regenerate = false;
+        }
+
+        if (key_buffer_regenerate) {
+            if (key_buffer_size < G.key_count + 1) {
+                glNamedBufferData(
+                    input_keys, (G.key_count + 1) * sizeof(uint),
+                    NULL, GL_DYNAMIC_COPY
+                );
+                glNamedBufferData(
+                    output_keys, (G.key_count + 1) * sizeof(uint),
+                    NULL, GL_DYNAMIC_COPY
+                );
+                key_buffer_size = G.key_count + 1;
+            }
+            key_buffer_regenerate = false;
         }
 
         if (G.key_count > 0) {
-            // TODO: optimize
-            glNamedBufferData(
-                input_keys, (G.key_count + 1) * sizeof(uint),
-                NULL, GL_DYNAMIC_COPY
-            );
-            glNamedBufferData(
-                output_keys, (G.key_count + 1) * sizeof(uint),
-                NULL, GL_DYNAMIC_COPY
-            );
-
             // zero fill input key counts
             glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
             glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, input_keys);
