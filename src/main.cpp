@@ -215,17 +215,16 @@ int main(void) {
 
     auto camera = OrbitingCamera(vec3(0, 0, 0), 30, 0, 0);
     Globals G;
-    G.gravity = vec4(0, 0, 0, 0);
-    G.low_bound = vec3(-15, -8, -15);
-    G.object_count = 5000;
-    G.high_bound = vec3(15, 8, 15);
+    G.gravity = vec4(0, -20, 0, 0);
+    G.low_bound = vec3(-30.5, -17, 0);
+    G.object_count = 25000;
+    G.high_bound = vec3(30.5, 17, 0);
     G.particle_size = 0.1;
     G.smoothing_radius = 1.0;
-    G.target_density = 1.0;
-    G.pressure_multiplier = 1.0;
+    G.target_density = 15;
+    G.pressure_multiplier = 500;
     G.collision_multiplier = 0.9;
-    // ez a szimulációhoz lehet nagyobb, de így jobb a vizualizáció
-    G.key_count = 8*1024/4; // 8 KB / 4 B
+    G.key_count = 5000;
     G.selected_index = 0;
     G.visualization = VISUALIZATION_DENSITY;
     G.density_color_multiplier = 1.0;
@@ -284,13 +283,13 @@ int main(void) {
         ImGui::DragFloat("Camera pitch", &camera.pitch, 0.1, -89.999, 89.999);
         ImGui::DragFloat("Camera distance", &camera.distance, 0.02, 1, 100);
         ImGui::SeparatorText("Generic physics settings");
-        ImGui::DragFloat3("Gravity", glm::value_ptr(G.gravity), 0.01, -10, 10);
-        ImGui::DragFloat3("Box high bound", glm::value_ptr(G.high_bound), 0.02, 0, 30);
-        ImGui::DragFloat3("Box low bound", glm::value_ptr(G.low_bound), 0.02, -30, 0);
+        ImGui::DragFloat3("Gravity", glm::value_ptr(G.gravity), 0.1, -100, 100);
+        ImGui::DragFloat3("Box high bound", glm::value_ptr(G.high_bound), 0.02, 0, 60);
+        ImGui::DragFloat3("Box low bound", glm::value_ptr(G.low_bound), 0.02, -60, 0);
         ImGui::SeparatorText("SPH settings");
         ImGui::DragFloat("Smoothing radius", &G.smoothing_radius, 0.001, 0.01, 10);
-        ImGui::DragFloat("Targed density", &G.target_density, 0.001, 0.01, 10);
-        ImGui::DragFloat("Pressure multiplier", &G.pressure_multiplier, 0.001, 0.01, 10);
+        ImGui::DragFloat("Target density", &G.target_density, 0.01, 0.01, 100);
+        ImGui::DragFloat("Pressure multiplier", &G.pressure_multiplier, 0.1, 0.01, 1000);
         ImGui::DragFloat("Collision multiplier", &G.collision_multiplier, 0.01, 0.1, 1);
         ImGui::SeparatorText("Visualization settings");
         ImGui::DragFloat("Particle size", &G.particle_size, 0.001, 0.01, 10);
