@@ -10,10 +10,6 @@ layout(std430, binding = 4) writeonly buffer outputs {
     Particle po[];
 };
 
-float density_to_pressure(float density) {
-    return (density - G.target_density) * G.pressure_multiplier;
-}
-
 void main() {
     uint i = gl_GlobalInvocationID.x;
     if (i >= G.object_count) {
@@ -46,10 +42,5 @@ void main() {
         particle.position.z = G.low_bound.z;
         particle.velocity.z = abs(particle.velocity.z) * G.collision_multiplier;
     }
-    particle.predicted_position =
-        particle.position + particle.velocity * G.delta_time;
-    ivec4 cell_pos = cell_pos(particle.predicted_position);
-    particle.cell_hash = cell_hash(cell_pos);
-    particle.cell_key = cell_key(particle.cell_hash);
     po[i] = particle;
 }

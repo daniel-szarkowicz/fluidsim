@@ -19,12 +19,7 @@ void main() {
     if (i >= G.object_count) {
         return;
     }
-    float density = 0;
-    for_neighbor(p[i], neighbor, {
-        float distance = distance(p[i].predicted_position, neighbor.predicted_position);
-        density += neighbor.mass * kernel(distance);
-    });
+
     Particle particle = p[i];
-    particle.density = density;
-    po[i] = particle;
+    po[key_map[particle.cell_key] + particle.index_in_key] = particle;
 }

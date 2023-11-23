@@ -4,6 +4,10 @@ layout(std430, binding = 3) readonly buffer points {
     Particle p[];
 };
 
+layout(std430, binding = 2) readonly buffer keys {
+    uint key_map[];
+};
+
 uniform mat4 view;
 
 out vec4 vColor;
@@ -13,6 +17,10 @@ void main() {
     uint i = gl_InstanceID;
     gl_Position = view * p[i].position;
     vRadius = G.particle_size;
+    vColor = vec4(1, 0, 1, 1);
+    if (G.key_count == 0) {
+        return;
+    }
 
     switch(G.visualization) {
         case VISUALIZATION_DENSITY: {
@@ -32,7 +40,10 @@ void main() {
                 );
             }
         } break;
-        case VISUALIZATION_CELL_KEY: {
+        case VISUALIZATION_CELL_KEY_EXPECTED: {
+            if (G.selected_index >= G.object_count) {
+                return;
+            }
             if(G.selected_index == i) {
                 vColor = vec4(0, 0, 1, 1);
             } else {
@@ -61,8 +72,32 @@ void main() {
                 }
             }
         } break;
-        default: {
-            vColor = vec4(1, 1, 0, 1);
-        }
+        case VISUALIZATION_CELL_KEY_ACTUAL: {
+            if (G.selected_index >= G.object_count) {
+                return;
+            }
+            if(G.selected_index == i) {
+                vColor = vec4(0, 0, 1, 1);
+            } else {
+                Particle s = p[G.selected_index];
+                vColor = vec4(0, 0, 0, 1);
+                bool colored = false;
+                for_neighbor_unchecked(s, neighbor, {
+                    if (neighbor.id == p[i].id) {
+                        vColor.r = 1;
+                        colored = true;
+                    }
+                });
+                for_neighbor(s, neighbor, {
+                    if (neighbor.id == p[i].id) {
+                        vColor.g = 1;
+                        colored = true;
+                    }
+                });
+                if (!colored) {
+                    vColor = vec4(1, 0, 1, 1);
+                }
+            }
+        } break;
     }
 }

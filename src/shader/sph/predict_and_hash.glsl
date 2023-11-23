@@ -10,8 +10,8 @@ layout(std430, binding = 4) writeonly buffer outputs {
     Particle po[];
 };
 
-layout(std430, binding = 2) readonly buffer keys {
-    uint key_map[];
+layout(std430, binding = 2) buffer atomics {
+    uint key_counters[];
 };
 
 void main() {
@@ -19,12 +19,12 @@ void main() {
     if (i >= G.object_count) {
         return;
     }
-    float density = 0;
-    for_neighbor(p[i], neighbor, {
-        float distance = distance(p[i].predicted_position, neighbor.predicted_position);
-        density += neighbor.mass * kernel(distance);
-    });
     Particle particle = p[i];
-    particle.density = density;
+    particle.predicted_position =
+        particle.position + particle.velocity * G.delta_time;
+    ivec4 cell_pos = cell_pos(particle.predicted_position);
+    particle.cell_hash = cell_hash(cell_pos);
+    particle.cell_key = cell_key(particle.cell_hash);
+    particle.index_in_key = atomicAdd(key_counters[particle.cell_key + 1], 1);
     po[i] = particle;
 }

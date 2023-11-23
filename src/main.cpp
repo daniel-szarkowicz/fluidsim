@@ -90,6 +90,7 @@ int main(void) {
                                .vertex_file(globals)
                                .vertex_file(globals_layout)
                                .vertex_file(hash)
+                               .vertex_file(for_neighbor)
                                .vertex_file("src/shader/particle_vertex.glsl")
                                .geometry_source(version)
                                .geometry_file("src/shader/particle_geometry.glsl")
@@ -115,6 +116,39 @@ int main(void) {
                              .compute_file("src/shader/generate_particles.glsl")
                              .build();
 
+    ComputeShader clear_keys = ComputeShader::builder()
+                             .compute_source(version)
+                             .compute_file(globals)
+                             .compute_file(globals_layout)
+                             .compute_file("src/shader/sph/clear_keys.glsl")
+                             .build();
+
+    ComputeShader predict_and_hash = ComputeShader::builder()
+                             .compute_source(version)
+                             .compute_file(particle)
+                             .compute_file(globals)
+                             .compute_file(globals_layout)
+                             .compute_file(hash)
+                             .compute_file(kernel)
+                             .compute_file("src/shader/sph/predict_and_hash.glsl")
+                             .build();
+
+    ComputeShader prefix_sum = ComputeShader::builder()
+                             .compute_source(version)
+                             .compute_file(globals)
+                             .compute_file(globals_layout)
+                             .compute_file("src/shader/sph/prefix_sum.glsl")
+                             .build();
+
+    ComputeShader bucket_sort = ComputeShader::builder()
+                             .compute_source(version)
+                             .compute_file(particle)
+                             .compute_file(globals)
+                             .compute_file(globals_layout)
+                             .compute_file(hash)
+                             .compute_file(kernel)
+                             .compute_file("src/shader/sph/bucket_sort.glsl")
+                             .build();
     ComputeShader density = ComputeShader::builder()
                              .compute_source(version)
                              .compute_file(particle)
@@ -148,9 +182,9 @@ int main(void) {
                              .build();
 
     ComputeShader compute_pipeline[] = {
-        update_position,
         density,
         pressure_force,
+        update_position,
     };
 
     GLuint empty_vao;
@@ -203,10 +237,21 @@ int main(void) {
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, input_particles);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, output_particles);
 
-    bool paused = true;
-    bool generate = true;
+    GLuint input_keys;
+    GLuint output_keys;
+    glGenBuffers(1, &input_keys);
+    glGenBuffers(1, &output_keys);
+    glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, input_keys);
+    glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, output_keys);
+
+    bool object_buffer_regenerate = true;
     uint prev_object_count = 0;
     uint object_buffer_size = 0;
+
+    bool key_buffer_regenerate = true;
+    uint key_buffer_size = 0;
+
+    bool paused = true;
     auto prev_frame = std::chrono::steady_clock::now();
 
     while (!glfwWindowShouldClose(window)) {
@@ -223,12 +268,15 @@ int main(void) {
         ImGui::NewFrame();
         ImGui::Begin("Settings");
         ImGui::Text("FPS: %2.2f", ImGui::GetIO().Framerate);
-        if(ImGui::SliderInt("Particle count", (int*)&G.object_count, 1, 10000)) {
-            generate = true;
+        if(ImGui::SliderInt("Particle count", (int*)&G.object_count, 1, 100000)) {
+            object_buffer_regenerate = true;
         }
         if(ImGui::Button("Restart")) {
-            generate = true;
+            object_buffer_regenerate = true;
             prev_object_count = 0;
+        }
+        if(ImGui::SliderInt("Key count", (int*)&G.key_count, 10, 100000)) {
+            key_buffer_regenerate = true;
         }
         ImGui::Checkbox("Pause", &paused);
         ImGui::SeparatorText("Camera settings");
@@ -253,15 +301,20 @@ int main(void) {
         ) {
             G.visualization = VISUALIZATION_DENSITY;
         }
-        if(ImGui::RadioButton("Visualize cell key",
-                              G.visualization == VISUALIZATION_CELL_KEY)
+        if(ImGui::RadioButton("Visualize cell key (expected)",
+                              G.visualization == VISUALIZATION_CELL_KEY_EXPECTED)
         ) {
-            G.visualization = VISUALIZATION_CELL_KEY;
+            G.visualization = VISUALIZATION_CELL_KEY_EXPECTED;
+        }
+        if(ImGui::RadioButton("Visualize cell key (actual)",
+                              G.visualization == VISUALIZATION_CELL_KEY_ACTUAL)
+        ) {
+            G.visualization = VISUALIZATION_CELL_KEY_ACTUAL;
         }
         ImGui::End();
         glNamedBufferData(globals_ssbo, sizeof(G), &G, GL_DYNAMIC_DRAW);
 
-        if (generate) {
+        if (object_buffer_regenerate) {
             if (object_buffer_size < G.object_count) {
                 glNamedBufferData(
                     output_particles, G.object_count * sizeof(Particle),
@@ -287,10 +340,57 @@ int main(void) {
                 );
                 object_buffer_size = G.object_count;
             }
-            generate = false;
+            object_buffer_regenerate = false;
         }
 
+        if (key_buffer_regenerate) {
+            if (key_buffer_size < G.key_count + 1) {
+                glNamedBufferData(
+                    input_keys, (G.key_count + 1) * sizeof(uint),
+                    NULL, GL_DYNAMIC_COPY
+                );
+                glNamedBufferData(
+                    output_keys, (G.key_count + 1) * sizeof(uint),
+                    NULL, GL_DYNAMIC_COPY
+                );
+                key_buffer_size = G.key_count + 1;
+            }
+            key_buffer_regenerate = false;
+        }
+
+        if (G.key_count > 0) {
+            // zero fill input key counts
+            glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+            glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, input_keys);
+            clear_keys.dispatch_executions(G.key_count + 1);
+
+            // count keys
+            glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+            glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, input_particles);
+            glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, output_particles);
+            predict_and_hash.dispatch_executions(G.object_count);
+            std::swap(input_particles, output_particles);
+
+            // calculate key indicies
+            for (uint offset = 1; offset < G.key_count + 1; offset *= 2) {
+                glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+                glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, input_keys);
+                glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, output_keys);
+                prefix_sum.uniform("offset", offset);
+                prefix_sum.dispatch_executions(G.key_count + 1);
+                std::swap(input_keys, output_keys);
+            }
+
+            // bucket sort using key indicies
+            glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+            glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, input_keys);
+            glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, input_particles);
+            glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, output_particles);
+            bucket_sort.dispatch_executions(G.object_count);
+            std::swap(input_particles, output_particles);
+        }
         if (!paused) {
+
             for (auto shader : compute_pipeline) {
                 glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
                 glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, input_particles);
