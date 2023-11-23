@@ -15,7 +15,7 @@ OBJS = $(SOURCES:%.cpp=$(BUILD_DIR)/%.o)
 
 CXXFLAGS =
 CXXFLAGS += -std=c++17 -I$(IMGUI_DIR) -I$(IMGUI_DIR)/backends
-CXXFLAGS += -g -Wall -Wformat -Wextra -fopenmp
+CXXFLAGS += -g -Wall -Wformat -Wextra
 LIBS =
 LIBS += `pkg-config --static --libs glfw3`
 LIBS += `pkg-config --static --libs glew`
