@@ -24,7 +24,7 @@ void main() {
 
     switch(G.visualization) {
         case VISUALIZATION_DENSITY: {
-            float relative_density = p[i].density - G.target_density;
+            float relative_density = p[i].density / G.target_density - 1;
             relative_density *= G.density_color_multiplier;
             if (relative_density < 0) {
                 vColor = mix(
