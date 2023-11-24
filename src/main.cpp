@@ -156,7 +156,7 @@ int main(void) {
 
     auto camera = OrbitingCamera(vec3(0, 0, 0), 30, 0, 0);
     Globals G;
-    G.gravity = vec4(0, -20, 0, 0);
+    G.gravity = vec4(0, -3, 0, 0);
     G.low_bound = vec3(-30.5, -17, 0);
     G.object_count = 25000;
     G.high_bound = vec3(30.5, 17, 0);
