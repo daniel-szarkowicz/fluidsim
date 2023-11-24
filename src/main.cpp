@@ -1,20 +1,11 @@
 #include "camera.hpp"
 #include "imgui.h"
-#include "imgui_impl_glfw.h"
-#include "imgui_impl_opengl3.h"
 #include "shader.hpp"
+#include "context.hpp"
 #include <GL/glew.h>
-#include <GLFW/glfw3.h>
 #include <chrono>
-#include <fstream>
 #include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/random.hpp>
 #include <glm/gtc/type_ptr.hpp>
-#include <sstream>
-#include <stdio.h>
-#include <string>
-#include <vector>
 
 using glm::vec3;
 using glm::vec4;
@@ -22,66 +13,8 @@ using glm::vec4;
 #include "common/particle.glsl"
 #include "common/globals.glsl"
 
-void GLAPIENTRY message_callback(GLenum source, GLenum type, GLuint id,
-                                 GLenum severity, GLsizei length,
-                                 const GLchar* message, const void* userParam) {
-    (void)source;
-    (void)type;
-    (void)id;
-    (void)length;
-    (void)userParam;
-    switch (severity) {
-        case GL_DEBUG_SEVERITY_HIGH: {
-            fprintf(stderr, "[ERROR]: %s\n", message);
-            exit(1);
-        } break;
-        case GL_DEBUG_SEVERITY_MEDIUM: {
-            fprintf(stderr, "[WARNING]: %s\n", message);
-        } break;
-        default: {}
-    }
-}
-
-void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
-    (void)window;
-    glViewport(0, 0, width, height);
-}
-
 int main(void) {
-    if (!glfwInit()) {
-        fprintf(stderr, "GLFW init error\n");
-        return 1;
-    }
-
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-    auto window = glfwCreateWindow(1280, 720, "fluidsim", NULL, NULL);
-    if (!window) {
-        fprintf(stderr, "GLFW window error\n");
-        glfwTerminate();
-        return 1;
-    }
-    glfwMakeContextCurrent(window);
-    glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
-
-    IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
-    ImGuiIO& io = ImGui::GetIO();
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-    ImGui::StyleColorsDark();
-
-    ImGui_ImplGlfw_InitForOpenGL(window, true);
-    ImGui_ImplOpenGL3_Init("#version 430");
-
-    glewInit();
-    printf("Renderer: %s\n", glGetString(GL_RENDERER));
-    printf("OpenGL version: %s\n", glGetString(GL_VERSION));
-
-    glEnable(GL_DEBUG_OUTPUT);
-    glDebugMessageCallback(message_callback, 0);
-    glEnable(GL_DEPTH_TEST);
-    glDepthFunc(GL_LESS);
+    Context::init(1280, 720, "fluidsim");
 
     const char* version = "#version 430";
     const char* particle = "src/common/particle.glsl";
@@ -261,18 +194,13 @@ int main(void) {
     bool paused = true;
     auto prev_frame = std::chrono::steady_clock::now();
 
-    while (!glfwWindowShouldClose(window)) {
+    Context::loop([&](){
         auto current_frame = std::chrono::steady_clock::now();
         G.delta_time = std::chrono::duration_cast<std::chrono::milliseconds>(
                           current_frame - prev_frame)
                           .count() /
                       1000.0f;
         prev_frame = current_frame;
-        glfwPollEvents();
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        ImGui_ImplOpenGL3_NewFrame();
-        ImGui_ImplGlfw_NewFrame();
-        ImGui::NewFrame();
         ImGui::Begin("Settings");
         ImGui::Text("FPS: %2.2f", ImGui::GetIO().Framerate);
         if(ImGui::SliderInt("Particle count", (int*)&G.object_count, 1, 100000)) {
@@ -419,17 +347,8 @@ int main(void) {
         box_shader.uniform("view_projection", camera.view_projection());
         glBindVertexArray(box_vao);
         glDrawArrays(GL_LINES, 0, 24);
+    });
 
-        ImGui::Render();
-        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-        glfwSwapBuffers(window);
-    }
-
-    ImGui_ImplOpenGL3_Shutdown();
-    ImGui_ImplGlfw_Shutdown();
-    ImGui::DestroyContext();
-
-    glfwDestroyWindow(window);
-    glfwTerminate();
+    Context::uninit();
     return 0;
 }
