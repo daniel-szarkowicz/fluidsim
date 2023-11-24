@@ -246,6 +246,11 @@ int main(void) {
         ) {
             G.visualization = VISUALIZATION_CELL_KEY_ACTUAL;
         }
+        if(ImGui::RadioButton("Visualize speed",
+                              G.visualization == VISUALIZATION_SPEED)
+        ) {
+            G.visualization = VISUALIZATION_SPEED;
+        }
         ImGui::End();
         glNamedBufferSubData(globals_ssbo, 0, sizeof(G), &G);
 

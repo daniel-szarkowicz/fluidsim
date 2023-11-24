@@ -99,5 +99,13 @@ void main() {
                 }
             }
         } break;
+        case VISUALIZATION_SPEED: {
+            float speed = length(p[i].velocity)/3;
+            vColor = mix(
+                vec4(0, 0, 1, 1),
+                vec4(1, 0, 0, 1),
+                speed
+            );
+        }
     }
 }
