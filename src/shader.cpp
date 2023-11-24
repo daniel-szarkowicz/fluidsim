@@ -62,10 +62,6 @@ builder_file(ComputeShader, compute_file, compute_src);
         glShaderSource(shader_id, 1, &str, NULL);                              \
         glCompileShader(shader_id);                                            \
         glAttachShader(program_id, shader_id);                                 \
-        GLenum error;                                                          \
-        while ((error = glGetError()) != GL_NO_ERROR) {                        \
-            printf("%s: %s\n", #type, glewGetErrorString(error));              \
-        }                                                                      \
     } while (false);
 
 GraphicsShader GraphicsShader::builder::build() {
@@ -119,7 +115,7 @@ void ComputeShader::dispatch_executions(GLuint x, GLuint y, GLuint z) {
     template <> void Shader::uniform(const char* name, __VA_ARGS__) {          \
         GLint loc = glGetUniformLocation(program_id, name);                    \
         if (loc == -1) {                                                       \
-            fprintf(stderr, "Invalid uniform name: %s", name);                 \
+            fprintf(stderr, "[WARNING]: Invalid uniform name: %s\n", name);    \
         }
 #define su_end(uniform, ...)                                                   \
     glProgramUniform##uniform(program_id, loc, __VA_ARGS__);                   \

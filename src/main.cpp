@@ -26,13 +26,20 @@ void GLAPIENTRY message_callback(GLenum source, GLenum type, GLuint id,
                                  GLenum severity, GLsizei length,
                                  const GLchar* message, const void* userParam) {
     (void)source;
+    (void)type;
     (void)id;
     (void)length;
     (void)userParam;
-    fprintf(stderr,
-            "GL CALLBACK: %s type = 0x%x, severity = 0x%x, message = %s\n",
-            (type == GL_DEBUG_TYPE_ERROR ? "** GL ERROR **" : ""), type,
-            severity, message);
+    switch (severity) {
+        case GL_DEBUG_SEVERITY_HIGH: {
+            fprintf(stderr, "[ERROR]: %s\n", message);
+            exit(1);
+        } break;
+        case GL_DEBUG_SEVERITY_MEDIUM: {
+            fprintf(stderr, "[WARNING]: %s\n", message);
+        } break;
+        default: {}
+    }
 }
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
