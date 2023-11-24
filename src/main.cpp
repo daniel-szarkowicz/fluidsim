@@ -218,6 +218,7 @@ int main(void) {
     GLuint globals_ssbo;
     glGenBuffers(1, &globals_ssbo);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, globals_ssbo);
+    glNamedBufferData(globals_ssbo, sizeof(Globals), NULL, GL_DYNAMIC_DRAW);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, globals_ssbo);
 
     auto camera = OrbitingCamera(vec3(0, 0, 0), 30, 0, 0);
@@ -318,7 +319,7 @@ int main(void) {
             G.visualization = VISUALIZATION_CELL_KEY_ACTUAL;
         }
         ImGui::End();
-        glNamedBufferData(globals_ssbo, sizeof(G), &G, GL_DYNAMIC_DRAW);
+        glNamedBufferSubData(globals_ssbo, 0, sizeof(G), &G);
 
         if (object_buffer_regenerate) {
             if (object_buffer_size < G.object_count) {
