@@ -20,9 +20,10 @@ ComputeShader::builder::builder(): compute_src() {}
 #define builder_file(type_name, fn_name, src)                                  \
     type_name::builder& type_name::builder::fn_name(const char* filename) {    \
         std::ifstream file(filename);                                          \
-        file.exceptions(std::ifstream::failbit);                               \
         if (file.fail()) {                                                     \
-            throw std::invalid_argument("Failed to open file!");               \
+            fprintf(stderr,                                                    \
+                    "[ERROR]: Failed to open shader file %s\n", filename);     \
+            exit(1);                                                           \
         }                                                                      \
         src << file.rdbuf() << "\n";                                           \
         return *this;                                                          \
@@ -69,8 +70,11 @@ GraphicsShader GraphicsShader::builder::build() {
     std::string geometry_source = geometry_src.str();
     std::string fragment_source = fragment_src.str();
     if (vertex_source.length() == 0 || fragment_source.length() == 0) {
-        throw std::invalid_argument(
-            "Graphics shaders require vertex and fragment shaders");
+        fprintf(
+            stderr,
+            "[ERROR]: Graphics shaders require vertex and fragment shaders\n"
+        );
+        exit(1);
     }
     GLuint program_id = glCreateProgram();
     attach_shader(program_id, vertex_source, GL_VERTEX_SHADER);
