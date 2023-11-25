@@ -208,7 +208,7 @@ int main(void) {
         prev_frame = current_frame;
         ImGui::Begin("Settings");
         ImGui::Text("FPS: %2.2f", ImGui::GetIO().Framerate);
-        if(ImGui::SliderInt("Particle count", (int*)&G.object_count, 1, 100000)) {
+        if(ImGui::SliderInt("Particle count", (int*)&G.object_count, 1, 200000)) {
             object_buffer_regenerate = true;
         }
         if(ImGui::Button("Restart")) {
