@@ -215,6 +215,13 @@ int main(void) {
             object_buffer_regenerate = true;
             prev_object_count = 0;
         }
+        uint recommended = std::max(G.grid_size.x * G.grid_size.y * G.grid_size.z, 10);
+        auto btntext = "Set recommended key count ("
+            + std::to_string(recommended) + ")";
+        if (ImGui::Button(btntext.c_str())) {
+            G.key_count = recommended;
+            key_buffer_regenerate = true;
+        }
         if(ImGui::SliderInt("Key count", (int*)&G.key_count, 10, 100000)) {
             key_buffer_regenerate = true;
         }
