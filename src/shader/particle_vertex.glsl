@@ -58,7 +58,7 @@ void main() {
                 ivec4 s_cell = cell_pos(s.position);
                 bool same_key = false;
                 for (uint coi = 0; coi < 27; ++coi) {
-                    uint key = cell_key(cell_hash(s_cell + cell_neighbors[coi]));
+                    uint key = cell_key(s_cell + cell_neighbors[coi]);
                     if (key == p[i].cell_key) {
                         same_key = true;
                     }

@@ -41,15 +41,11 @@ uint hash(uint x) {
     return x;
 }
 
-uint cell_hash(ivec4 cell_pos) {
+uint cell_key(ivec4 cell_pos) {
     uint cell_hash = 0;
     cell_hash = hash(cell_hash + uint(cell_pos.x));
     cell_hash = hash(cell_hash + uint(cell_pos.y));
     cell_hash = hash(cell_hash + uint(cell_pos.z));
-    return cell_hash;
-}
-
-uint cell_key(uint cell_hash) {
     return cell_hash % G.key_count;
 }
 

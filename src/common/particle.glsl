@@ -7,11 +7,11 @@ struct Particle {
 
     float mass;
     float density;
-    uint cell_hash;
     uint cell_key;
-
     uint id;
+
     uint index_in_key;
     float _padding1;
     float _padding2;
+    float _padding3;
 };
