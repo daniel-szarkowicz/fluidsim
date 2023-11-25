@@ -196,10 +196,11 @@ int main(void) {
 
     Context::loop([&](){
         auto current_frame = std::chrono::steady_clock::now();
-        G.delta_time = std::chrono::duration_cast<std::chrono::milliseconds>(
-                          current_frame - prev_frame)
-                          .count() /
-                      1000.0f;
+        // G.delta_time = std::chrono::duration_cast<std::chrono::milliseconds>(
+        //                   current_frame - prev_frame)
+        //                   .count() /
+        //               1000.0f;
+        G.delta_time = 1.0/60.0;
         prev_frame = current_frame;
         ImGui::Begin("Settings");
         ImGui::Text("FPS: %2.2f", ImGui::GetIO().Framerate);
