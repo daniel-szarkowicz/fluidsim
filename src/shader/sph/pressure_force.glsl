@@ -14,10 +14,6 @@ layout(std430, binding = 2) readonly buffer keys {
     uint key_map[];
 };
 
-float density_to_pressure(float density) {
-    return (density - G.target_density) * G.pressure_multiplier;
-}
-
 void main() {
     uint i = gl_GlobalInvocationID.x;
     if (i >= G.object_count) {
@@ -33,8 +29,7 @@ void main() {
                 float alpha = float(i)/float(G.object_count);
                 dir = vec4(cos(alpha), sin(alpha), 0, 0);
             }
-            float pressure = (density_to_pressure(p[i].density)
-                + density_to_pressure(neighbor.density))/2;
+            float pressure = (p[i].pressure + neighbor.pressure)/2;
             pressure_force -= pressure * dir * kernel_derived(distance)
                 * neighbor.mass / neighbor.density;
         }
