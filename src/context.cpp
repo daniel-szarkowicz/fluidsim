@@ -1,6 +1,7 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <cstdio>
+#include <cstdlib>
 #include "context.hpp"
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
@@ -91,20 +92,22 @@ void Context::init(int window_width, int window_height, const char* title) {
     glDepthFunc(GL_LESS);
 }
 
-void Context::loop(std::function<void()> frame) {
-    while (!glfwWindowShouldClose(window)) {
-        glfwPollEvents();
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        ImGui_ImplOpenGL3_NewFrame();
-        ImGui_ImplGlfw_NewFrame();
-        ImGui::NewFrame();
+bool Context::should_loop() {
+    return !glfwWindowShouldClose(window);
+}
 
-        frame();
+void Context::frame_start() {
+    glfwPollEvents();
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
+}
 
-        ImGui::Render();
-        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-        glfwSwapBuffers(window);
-    }
+void Context::frame_end() {
+    ImGui::Render();
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+    glfwSwapBuffers(window);
 }
 
 void Context::uninit() {
