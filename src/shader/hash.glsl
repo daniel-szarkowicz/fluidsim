@@ -41,14 +41,15 @@ uint hash(uint x) {
     return x;
 }
 
-uint cell_key(ivec4 cell_pos) {
-    uint cell_hash = 0;
-    cell_hash = hash(cell_hash + uint(cell_pos.x));
-    cell_hash = hash(cell_hash + uint(cell_pos.y));
-    cell_hash = hash(cell_hash + uint(cell_pos.z));
-    return cell_hash % G.key_count;
-}
-
 ivec4 cell_pos(vec4 pos) {
     return ivec4(floor(pos / G.smoothing_radius));
+}
+
+uint cell_key(ivec4 cell_pos) {
+    ivec4 cell_pos_offset = cell_pos - G.low_bound_cell;
+    uint cell_hash = 0;
+    cell_hash = cell_hash * G.grid_size.x + cell_pos_offset.x % G.grid_size.x;
+    cell_hash = cell_hash * G.grid_size.y + cell_pos_offset.y % G.grid_size.y;
+    cell_hash = cell_hash * G.grid_size.z + cell_pos_offset.z % G.grid_size.z;
+    return cell_hash % G.key_count;
 }

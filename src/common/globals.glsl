@@ -7,6 +7,12 @@ struct Globals {
     vec3 high_bound;
     float _padding2;
 
+    ivec4 low_bound_cell;
+
+    ivec4 high_bound_cell;
+
+    ivec4 grid_size;
+
     uint object_count;
     float particle_size;
     float smoothing_radius;

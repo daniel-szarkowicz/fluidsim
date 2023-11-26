@@ -9,6 +9,7 @@
 
 using glm::vec3;
 using glm::vec4;
+using glm::ivec4;
 
 #include "common/particle.glsl"
 #include "common/globals.glsl"
@@ -169,6 +170,9 @@ int main(void) {
     G.selected_index = 0;
     G.visualization = VISUALIZATION_DENSITY;
     G.density_color_multiplier = 1.0;
+    G.low_bound_cell = ivec4(floor(G.low_bound / G.smoothing_radius), 1);
+    G.high_bound_cell = ivec4(floor(G.high_bound / G.smoothing_radius), 1);
+    G.grid_size = G.high_bound_cell - G.low_bound_cell + ivec4(1, 1, 1, 0);
 
     GLuint input_particles;
     GLuint output_particles;
@@ -204,12 +208,19 @@ int main(void) {
         prev_frame = current_frame;
         ImGui::Begin("Settings");
         ImGui::Text("FPS: %2.2f", ImGui::GetIO().Framerate);
-        if(ImGui::SliderInt("Particle count", (int*)&G.object_count, 1, 100000)) {
+        if(ImGui::SliderInt("Particle count", (int*)&G.object_count, 1, 200000)) {
             object_buffer_regenerate = true;
         }
         if(ImGui::Button("Restart")) {
             object_buffer_regenerate = true;
             prev_object_count = 0;
+        }
+        uint recommended = std::max(G.grid_size.x * G.grid_size.y * G.grid_size.z, 10);
+        auto btntext = "Set recommended key count ("
+            + std::to_string(recommended) + ")";
+        if (ImGui::Button(btntext.c_str())) {
+            G.key_count = recommended;
+            key_buffer_regenerate = true;
         }
         if(ImGui::SliderInt("Key count", (int*)&G.key_count, 10, 100000)) {
             key_buffer_regenerate = true;
@@ -221,8 +232,13 @@ int main(void) {
         ImGui::DragFloat("Camera distance", &camera.distance, 0.02, 1, 100);
         ImGui::SeparatorText("Generic physics settings");
         ImGui::DragFloat3("Gravity", glm::value_ptr(G.gravity), 0.1, -100, 100);
-        ImGui::DragFloat3("Box high bound", glm::value_ptr(G.high_bound), 0.02, 0, 60);
-        ImGui::DragFloat3("Box low bound", glm::value_ptr(G.low_bound), 0.02, -60, 0);
+        bool hb = ImGui::DragFloat3("Box high bound", glm::value_ptr(G.high_bound), 0.02, 0, 60);
+        bool lb = ImGui::DragFloat3("Box low bound", glm::value_ptr(G.low_bound), 0.02, -60, 0);
+        if (hb || lb) {
+            G.low_bound_cell = ivec4(floor(G.low_bound / G.smoothing_radius), 1);
+            G.high_bound_cell = ivec4(floor(G.high_bound / G.smoothing_radius), 1);
+            G.grid_size = G.high_bound_cell - G.low_bound_cell + ivec4(1, 1, 1, 0);
+        }
         ImGui::SeparatorText("SPH settings");
         ImGui::DragFloat("Smoothing radius", &G.smoothing_radius, 0.001, 0.01, 10);
         ImGui::DragFloat("Target density", &G.target_density, 0.01, 0.01, 100);

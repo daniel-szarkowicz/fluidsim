@@ -26,5 +26,6 @@ void main() {
     });
     Particle particle = p[i];
     particle.density = density;
+    particle.pressure = (density - G.target_density) * G.pressure_multiplier;
     po[i] = particle;
 }

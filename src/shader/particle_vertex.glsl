@@ -55,7 +55,7 @@ void main() {
                 ) {
                     vColor.g = 1;
                 }
-                ivec4 s_cell = cell_pos(s.position);
+                ivec4 s_cell = s.cell_pos;
                 bool same_key = false;
                 for (uint coi = 0; coi < 27; ++coi) {
                     uint key = cell_key(s_cell + cell_neighbors[coi]);
