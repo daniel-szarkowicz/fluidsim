@@ -51,3 +51,14 @@ float kernel_derived(float distance) {
     } // else val = 0
     return val / volume;
 }
+
+
+float viscosity_kernel(float distance){
+    float val = 0;
+    if(0 <= distance && distance <= h){
+        //Linear kernel based on paper 
+        //http://www.ligum.umontreal.ca/Clavet-2005-PVFS/pvfs.pdf
+        val = 1 - distance/h;
+    }
+    return val;
+}

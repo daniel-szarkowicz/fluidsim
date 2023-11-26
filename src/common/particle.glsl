@@ -12,6 +12,7 @@ struct Particle {
 
     uint id;
     uint index_in_key;
-    float _padding1;
+    float near_density;
+    //float _padding1;
     float _padding2;
 };
