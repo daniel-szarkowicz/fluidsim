@@ -8,8 +8,7 @@
 #include <glm/gtc/type_ptr.hpp>
 
 using glm::vec3;
-using glm::vec4;
-using glm::ivec4;
+using glm::ivec3;
 
 #include "common/particle.glsl"
 #include "common/globals.glsl"
@@ -157,7 +156,7 @@ int main(void) {
 
     auto camera = OrbitingCamera(vec3(0, 0, 0), 30, 0, 0);
     Globals G;
-    G.gravity = vec4(0, -3, 0, 0);
+    G.gravity = vec3(0, -3, 0);
     G.low_bound = vec3(-30.5, -17, 0);
     G.object_count = 25000;
     G.high_bound = vec3(30.5, 17, 0);
@@ -170,9 +169,9 @@ int main(void) {
     G.selected_index = 0;
     G.visualization = VISUALIZATION_DENSITY;
     G.density_color_multiplier = 1.0;
-    G.low_bound_cell = ivec4(floor(G.low_bound / G.smoothing_radius), 1);
-    G.high_bound_cell = ivec4(floor(G.high_bound / G.smoothing_radius), 1);
-    G.grid_size = G.high_bound_cell - G.low_bound_cell + ivec4(1, 1, 1, 0);
+    G.low_bound_cell = ivec3(floor(G.low_bound / G.smoothing_radius));
+    G.high_bound_cell = ivec3(floor(G.high_bound / G.smoothing_radius));
+    G.grid_size = G.high_bound_cell - G.low_bound_cell + ivec3(1, 1, 1);
 
     GLuint input_particles;
     GLuint output_particles;
@@ -237,9 +236,9 @@ int main(void) {
         ImGui::SeparatorText("SPH settings");
         bool sr = ImGui::DragFloat("Smoothing radius", &G.smoothing_radius, 0.001, 0.01, 10);
         if (hb || lb || sr) {
-            G.low_bound_cell = ivec4(floor(G.low_bound / G.smoothing_radius), 1);
-            G.high_bound_cell = ivec4(floor(G.high_bound / G.smoothing_radius), 1);
-            G.grid_size = G.high_bound_cell - G.low_bound_cell + ivec4(1, 1, 1, 0);
+            G.low_bound_cell = ivec3(floor(G.low_bound / G.smoothing_radius));
+            G.high_bound_cell = ivec3(floor(G.high_bound / G.smoothing_radius));
+            G.grid_size = G.high_bound_cell - G.low_bound_cell + ivec3(1, 1, 1);
         }
         ImGui::DragFloat("Target density", &G.target_density, 0.01, 0.01, 100);
         ImGui::DragFloat("Pressure multiplier", &G.pressure_multiplier, 0.1, 0.01, 1000);

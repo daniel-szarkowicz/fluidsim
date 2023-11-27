@@ -15,7 +15,7 @@ out float vRadius;
 
 void main() {
     uint i = gl_InstanceID;
-    gl_Position = view * p[i].position;
+    gl_Position = view * vec4(p[i].position, 1);
     vRadius = G.particle_size;
     vColor = vec4(1, 0, 1, 1);
     if (G.key_count == 0) {
@@ -55,7 +55,7 @@ void main() {
                 ) {
                     vColor.g = 1;
                 }
-                ivec4 s_cell = s.cell_pos;
+                ivec3 s_cell = s.cell_pos;
                 bool same_key = false;
                 for (uint coi = 0; coi < 27; ++coi) {
                     uint key = cell_key(s_cell + cell_neighbors[coi]);

@@ -1,15 +1,14 @@
 struct Particle {
-    vec4 position;
-
-    vec4 predicted_position;
-
-    vec4 velocity;
-
-    ivec4 cell_pos;
-
+    vec3 position;
     float mass;
+
+    vec3 predicted_position;
     float density;
+
+    vec3 velocity;
     uint cell_key;
+
+    ivec3 cell_pos;
     uint id;
 
     uint index_in_key;

@@ -19,15 +19,15 @@ void main() {
     if (i >= G.object_count) {
         return;
     }
-    vec4 pressure_force = vec4(0, 0, 0, 0);
+    vec3 pressure_force = vec3(0, 0, 0);
     for_neighbor(p[i], neighbor, {
         if (p[i].id != neighbor.id) {
             float distance = distance(p[i].predicted_position, neighbor.predicted_position);
-            vec4 dir = (p[i].predicted_position - neighbor.predicted_position)/distance;
+            vec3 dir = (p[i].predicted_position - neighbor.predicted_position)/distance;
             if (distance == 0.0) {
                 // pseudo random
                 float alpha = float(i)/float(G.object_count);
-                dir = vec4(cos(alpha), sin(alpha), 0, 0);
+                dir = vec3(cos(alpha), sin(alpha), 0);
             }
             float pressure = (p[i].pressure + neighbor.pressure)/2;
             pressure_force -= pressure * dir * kernel_derived(distance)

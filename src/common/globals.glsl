@@ -1,31 +1,30 @@
 struct Globals {
-    vec4 gravity;
+    vec3 gravity;
+    uint object_count;
 
     vec3 low_bound;
-    float _padding1;
+    float particle_size;
 
     vec3 high_bound;
-    float _padding2;
-
-    ivec4 low_bound_cell;
-
-    ivec4 high_bound_cell;
-
-    ivec4 grid_size;
-
-    uint object_count;
-    float particle_size;
     float smoothing_radius;
+
+    ivec3 low_bound_cell;
     float delta_time;
 
+    ivec3 high_bound_cell;
     float target_density;
+
+    ivec3 grid_size;
     float pressure_multiplier;
+
     float collision_multiplier;
     uint key_count;
-
     uint selected_index;
     uint visualization;
+
     float density_color_multiplier;
+    float _padding1;
+    float _padding2;
     float _padding3;
 };
 
