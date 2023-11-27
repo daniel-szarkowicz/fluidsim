@@ -234,13 +234,13 @@ int main(void) {
         ImGui::DragFloat3("Gravity", glm::value_ptr(G.gravity), 0.1, -100, 100);
         bool hb = ImGui::DragFloat3("Box high bound", glm::value_ptr(G.high_bound), 0.02, 0, 60);
         bool lb = ImGui::DragFloat3("Box low bound", glm::value_ptr(G.low_bound), 0.02, -60, 0);
-        if (hb || lb) {
+        ImGui::SeparatorText("SPH settings");
+        bool sr = ImGui::DragFloat("Smoothing radius", &G.smoothing_radius, 0.001, 0.01, 10);
+        if (hb || lb || sr) {
             G.low_bound_cell = ivec4(floor(G.low_bound / G.smoothing_radius), 1);
             G.high_bound_cell = ivec4(floor(G.high_bound / G.smoothing_radius), 1);
             G.grid_size = G.high_bound_cell - G.low_bound_cell + ivec4(1, 1, 1, 0);
         }
-        ImGui::SeparatorText("SPH settings");
-        ImGui::DragFloat("Smoothing radius", &G.smoothing_radius, 0.001, 0.01, 10);
         ImGui::DragFloat("Target density", &G.target_density, 0.01, 0.01, 100);
         ImGui::DragFloat("Pressure multiplier", &G.pressure_multiplier, 0.1, 0.01, 1000);
         ImGui::DragFloat("Collision multiplier", &G.collision_multiplier, 0.01, 0.1, 1);
