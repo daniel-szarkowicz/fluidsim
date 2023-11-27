@@ -121,8 +121,21 @@ int main(void) {
                              .compute_file("src/shader/sph/update_position.glsl")
                              .build();
 
+    ComputeShader viscosity = ComputeShader::builder()
+        .compute_source(version)
+        .compute_file(particle)
+        .compute_file(globals)
+        .compute_file(globals_layout)
+        .compute_file(hash)
+        .compute_file(kernel)
+        .compute_file(for_neighbor)
+        .compute_file("src/shader/sph/viscosity.glsl")
+        .build();
+
+
     ComputeShader compute_pipeline[] = {
         density,
+        viscosity,
         pressure_force,
         update_position,
     };
@@ -172,6 +185,8 @@ int main(void) {
     G.low_bound_cell = ivec3(floor(G.low_bound / G.smoothing_radius));
     G.high_bound_cell = ivec3(floor(G.high_bound / G.smoothing_radius));
     G.grid_size = G.high_bound_cell - G.low_bound_cell + ivec3(1, 1, 1);
+    G.sigma_viscosity = 0.3;
+    G.near_density_multiplier = 2;
 
     GLuint input_particles;
     GLuint output_particles;
@@ -243,6 +258,8 @@ int main(void) {
         ImGui::DragFloat("Target density", &G.target_density, 0.01, 0.01, 100);
         ImGui::DragFloat("Pressure multiplier", &G.pressure_multiplier, 0.1, 0.01, 1000);
         ImGui::DragFloat("Collision multiplier", &G.collision_multiplier, 0.01, 0.1, 1);
+        ImGui::DragFloat("sigma", &G.sigma_viscosity, 0.05, 0, 1);
+        ImGui::DragFloat("Near density multiplier", &G.near_density_multiplier, 0.5, 0, 10);
         ImGui::SeparatorText("Visualization settings");
         ImGui::DragFloat("Particle size", &G.particle_size, 0.001, 0.01, 10);
         ImGui::DragFloat("Density color multiplier", &G.density_color_multiplier, 0.01, 0.01, 10);

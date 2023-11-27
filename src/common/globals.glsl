@@ -23,9 +23,9 @@ struct Globals {
     uint visualization;
 
     float density_color_multiplier;
+    float sigma_viscosity;
+    float near_density_multiplier;
     float _padding1;
-    float _padding2;
-    float _padding3;
 };
 
 #define VISUALIZATION_DENSITY 0
