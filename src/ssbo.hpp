@@ -10,4 +10,6 @@ public:
     bool resize(GLsizeiptr new_size);
     void set_data(GLsizeiptr data_size, void* data);
     void bind();
+
+    SSBO(const SSBO&) = delete;
 };
