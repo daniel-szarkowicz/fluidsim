@@ -6,6 +6,7 @@
 #include <chrono>
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include "ssbo.hpp"
 
 using glm::vec3;
 using glm::ivec3;
@@ -193,11 +194,8 @@ int main(void) {
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
 
-    GLuint globals_ssbo;
-    glGenBuffers(1, &globals_ssbo);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, globals_ssbo);
-    glNamedBufferData(globals_ssbo, sizeof(Globals), NULL, GL_DYNAMIC_DRAW);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, globals_ssbo);
+    SSBO globals_ssbo = SSBO(1, GL_DYNAMIC_DRAW);
+    globals_ssbo.resize(sizeof(Globals));
 
     auto camera = OrbitingCamera(vec3(0, 0, 0), 30, 0, 0);
     Globals G;
@@ -220,12 +218,8 @@ int main(void) {
     G.sigma_viscosity = 0.3;
     G.near_density_multiplier = 2;
 
-    GLuint input_particles;
-    GLuint output_particles;
-    glGenBuffers(1, &input_particles);
-    glGenBuffers(1, &output_particles);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, input_particles);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, output_particles);
+    SSBO input_particles = SSBO(3, GL_DYNAMIC_COPY);
+    SSBO output_particles = SSBO(4, GL_DYNAMIC_COPY);
 
     GLuint input_keys;
     GLuint output_keys;
@@ -317,32 +311,27 @@ int main(void) {
             G.visualization = VISUALIZATION_SPEED;
         }
         ImGui::End();
-        glNamedBufferSubData(globals_ssbo, 0, sizeof(G), &G);
+        globals_ssbo.set_data(sizeof(G), &G);
+        globals_ssbo.bind();
 
         if (object_buffer_regenerate) {
             if (object_buffer_size < G.object_count) {
-                glNamedBufferData(
-                    output_particles, G.object_count * sizeof(Particle),
-                    NULL, GL_DYNAMIC_COPY
-                );
+                output_particles.resize(G.object_count * sizeof(Particle));
             }
             if (prev_object_count < G.object_count) {
                 glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-                glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, input_particles);
-                glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, output_particles);
+                input_particles.bind();
+                output_particles.bind();
                 generate_particles.uniform("prev_object_count", prev_object_count);
                 generate_particles.dispatch_executions(
                     G.object_count
                 );
-                std::swap(input_particles, output_particles);
+                std::swap(input_particles.buffer_id, output_particles.buffer_id);
             }
             prev_object_count = G.object_count;
             if (object_buffer_size < G.object_count) {
                 glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-                glNamedBufferData(
-                    output_particles, G.object_count * sizeof(Particle),
-                    NULL, GL_DYNAMIC_COPY
-                );
+                output_particles.resize(G.object_count * sizeof(Particle));
                 object_buffer_size = G.object_count;
             }
             object_buffer_regenerate = false;
@@ -371,10 +360,10 @@ int main(void) {
 
             // count keys
             glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-            glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, input_particles);
-            glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, output_particles);
+            input_particles.bind();
+            output_particles.bind();
             predict_and_hash.dispatch_executions(G.object_count);
-            std::swap(input_particles, output_particles);
+            std::swap(input_particles.buffer_id, output_particles.buffer_id);
 
             // calculate key indicies
             for (uint offset = 1; offset < G.key_count + 1; offset *= 2) {
@@ -389,19 +378,19 @@ int main(void) {
             // bucket sort using key indicies
             glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
             glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, input_keys);
-            glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, input_particles);
-            glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, output_particles);
+            input_particles.bind();
+            output_particles.bind();
             bucket_sort.dispatch_executions(G.object_count);
-            std::swap(input_particles, output_particles);
+            std::swap(input_particles.buffer_id, output_particles.buffer_id);
         }
         if (!paused) {
 
             for (auto shader : compute_pipeline) {
                 glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-                glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, input_particles);
-                glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, output_particles);
+                input_particles.bind();
+                output_particles.bind();
                 shader.dispatch_executions(G.object_count);
-                std::swap(input_particles, output_particles);
+                std::swap(input_particles.buffer_id, output_particles.buffer_id);
             }
         }
 
@@ -409,7 +398,7 @@ int main(void) {
         particle_shader.uniform("view", camera.view());
         particle_shader.uniform("projection", camera.projection());
         glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, input_particles);
+        input_particles.bind();
         glBindVertexArray(empty_vao);
         glDrawArraysInstanced(GL_POINTS, 0, 1, G.object_count);
 
