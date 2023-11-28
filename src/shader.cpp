@@ -5,7 +5,6 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <iostream>
 #include <sstream>
-#include <stdexcept>
 
 GraphicsShader::builder::builder()
     : vertex_src(), geometry_src(), fragment_src() {}
@@ -96,12 +95,20 @@ ComputeShader ComputeShader::builder::build() {
 
 Shader::Shader(GLuint program_id): program_id(program_id) {}
 GraphicsShader::GraphicsShader(GLuint program_id): Shader(program_id) {}
-ComputeShader::ComputeShader(GLuint program_id): Shader(program_id) {}
+ComputeShader::ComputeShader(GLuint program_id)
+    : Shader(program_id), ssbos(), ssbopairs() {}
 
 void Shader::use() { glUseProgram(program_id); }
 
 void ComputeShader::dispatch_workgroups(GLuint x, GLuint y, GLuint z) {
     use();
+    glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+    for (auto ssbo : ssbos) {
+        ssbo->bind();
+    }
+    for (auto ssbopair : ssbopairs) {
+        ssbopair->bind_and_swap();
+    }
     glDispatchCompute(x, y, z);
 }
 

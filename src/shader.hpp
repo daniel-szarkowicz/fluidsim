@@ -2,6 +2,8 @@
 
 #include <GL/glew.h>
 #include <sstream>
+#include <unordered_set>
+#include "ssbo.hpp"
 
 class Shader {
 protected:
@@ -36,6 +38,9 @@ public:
 
 class ComputeShader: public Shader {
 public:
+    std::unordered_set<std::shared_ptr<SSBO>> ssbos;
+    std::unordered_set<std::shared_ptr<SSBOPair>> ssbopairs;
+
     ComputeShader(GLuint program_id);
 
     class builder {
