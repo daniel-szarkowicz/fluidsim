@@ -222,6 +222,17 @@ int main(void) {
 
     auto keys = std::make_shared<SSBOPair>(2, 5, GL_DYNAMIC_COPY);
 
+    generate_particles.ssbopairs.insert(particles);
+    clear_keys.ssbos.insert(keys->input);
+    predict_and_hash.ssbopairs.insert(particles);
+    predict_and_hash.ssbos.insert(keys->input);
+    prefix_sum.ssbopairs.insert(keys);
+    bucket_sort.ssbopairs.insert(particles);
+    bucket_sort.ssbos.insert(keys->input);
+    for (auto& shader : compute_pipeline) {
+        shader.ssbopairs.insert(particles);
+    }
+
     bool object_buffer_regenerate = true;
     uint prev_object_count = 0;
 
@@ -309,8 +320,6 @@ int main(void) {
         if (object_buffer_regenerate) {
             particles->output->resize(G.object_count * sizeof(Particle));
             if (prev_object_count < G.object_count) {
-                glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-                particles->bind_and_swap();
                 generate_particles.uniform("prev_object_count", prev_object_count);
                 generate_particles.dispatch_executions(
                     G.object_count
@@ -329,34 +338,23 @@ int main(void) {
 
         if (G.key_count > 0) {
             // zero fill input key counts
-            glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-            keys->input->bind();
             clear_keys.dispatch_executions(G.key_count + 1);
 
             // count keys
-            glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-            particles->bind_and_swap();
             predict_and_hash.dispatch_executions(G.object_count);
 
             // calculate key indicies
             for (uint offset = 1; offset < G.key_count + 1; offset *= 2) {
-                glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-                keys->bind_and_swap();
                 prefix_sum.uniform("offset", offset);
                 prefix_sum.dispatch_executions(G.key_count + 1);
             }
 
             // bucket sort using key indicies
-            glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-            keys->input->bind();
-            particles->bind_and_swap();
             bucket_sort.dispatch_executions(G.object_count);
         }
-        if (!paused) {
 
-            for (auto shader : compute_pipeline) {
-                glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-                particles->bind_and_swap();
+        if (!paused) {
+            for (auto& shader : compute_pipeline) {
                 shader.dispatch_executions(G.object_count);
             }
         }
