@@ -1,15 +1,3 @@
-// uses Particle from particle.glsl
-
-layout(local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
-
-layout(std430, binding = 3) readonly buffer inputs {
-    Particle p[];
-};
-
-layout(std430, binding = 4) writeonly buffer outputs {
-    Particle po[];
-};
-
 uniform uint prev_object_count;
 
 void main() {

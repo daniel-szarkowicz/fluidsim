@@ -19,113 +19,145 @@ int main(void) {
     const char* version = "#version 430";
     const char* particle = "src/common/particle.glsl";
     const char* globals = "src/common/globals.glsl";
+    const char* particles_readonly_layout = "src/shader/particles_readonly_layout.glsl";
+    const char* particles_double_layout = "src/shader/particles_double_layout.glsl";
     const char* globals_layout = "src/shader/globals_layout.glsl";
+    const char* keys_readonly_layout = "src/shader/keys_readonly_layout.glsl";
     const char* hash = "src/shader/hash.glsl";
     const char* kernel = "src/shader/sph/kernel.glsl";
     const char* for_neighbor = "src/shader/for_neighbor.glsl";
+    const char* compute_layout = "src/shader/compute_layout.glsl";
+    const char* keys_readwrite_layout = "src/shader/keys_readwrite_layout.glsl";
+    const char* keys_double_layout = "src/shader/keys_double_layout.glsl";
 
     GraphicsShader particle_shader = GraphicsShader::builder()
-                               .vertex_source(version)
-                               .vertex_file(particle)
-                               .vertex_file(globals)
-                               .vertex_file(globals_layout)
-                               .vertex_file(hash)
-                               .vertex_file(for_neighbor)
-                               .vertex_file("src/shader/particle_vertex.glsl")
-                               .geometry_source(version)
-                               .geometry_file("src/shader/particle_geometry.glsl")
-                               .fragment_source(version)
-                               .fragment_file("src/shader/particle_fragment.glsl")
-                               .build();
+        .vertex_source(version)
+        .vertex_file(particle)
+        .vertex_file(globals)
+        .vertex_file(particles_readonly_layout)
+        .vertex_file(globals_layout)
+        .vertex_file(keys_readonly_layout)
+        .vertex_file(hash)
+        .vertex_file(for_neighbor)
+        .vertex_file("src/shader/particle_vertex.glsl")
+        .geometry_source(version)
+        .geometry_file("src/shader/particle_geometry.glsl")
+        .fragment_source(version)
+        .fragment_file("src/shader/particle_fragment.glsl")
+        .build();
 
     GraphicsShader box_shader = GraphicsShader::builder()
-                            .vertex_source(version)
-                            .vertex_file(globals)
-                            .vertex_file(globals_layout)
-                            .vertex_file("src/shader/box_vertex.glsl")
-                            .fragment_source(version)
-                            .fragment_file("src/shader/box_fragment.glsl")
-                            .build();
+        .vertex_source(version)
+        .vertex_file(globals)
+        .vertex_file(globals_layout)
+        .vertex_file("src/shader/box_vertex.glsl")
+        .fragment_source(version)
+        .fragment_file("src/shader/box_fragment.glsl")
+        .build();
 
     ComputeShader generate_particles = ComputeShader::builder()
-                             .compute_source(version)
-                             .compute_file(particle)
-                             .compute_file(globals)
-                             .compute_file(globals_layout)
-                             .compute_file(hash)
-                             .compute_file("src/shader/generate_particles.glsl")
-                             .build();
+        .compute_source(version)
+        .compute_file(compute_layout)
+        .compute_file(particle)
+        .compute_file(globals)
+        .compute_file(particles_double_layout)
+        .compute_file(globals_layout)
+        .compute_file(hash)
+        .compute_file("src/shader/generate_particles.glsl")
+        .build();
 
     ComputeShader clear_keys = ComputeShader::builder()
-                             .compute_source(version)
-                             .compute_file(globals)
-                             .compute_file(globals_layout)
-                             .compute_file("src/shader/sph/clear_keys.glsl")
-                             .build();
+        .compute_source(version)
+        .compute_file(compute_layout)
+        .compute_file(globals)
+        .compute_file(globals_layout)
+        .compute_file(keys_readwrite_layout)
+        .compute_file("src/shader/sph/clear_keys.glsl")
+        .build();
 
     ComputeShader predict_and_hash = ComputeShader::builder()
-                             .compute_source(version)
-                             .compute_file(particle)
-                             .compute_file(globals)
-                             .compute_file(globals_layout)
-                             .compute_file(hash)
-                             .compute_file(kernel)
-                             .compute_file("src/shader/sph/predict_and_hash.glsl")
-                             .build();
+        .compute_source(version)
+        .compute_file(compute_layout)
+        .compute_file(particle)
+        .compute_file(globals)
+        .compute_file(particles_double_layout)
+        .compute_file(globals_layout)
+        .compute_file(keys_readwrite_layout)
+        .compute_file(hash)
+        .compute_file(kernel)
+        .compute_file("src/shader/sph/predict_and_hash.glsl")
+        .build();
 
     ComputeShader prefix_sum = ComputeShader::builder()
-                             .compute_source(version)
-                             .compute_file(globals)
-                             .compute_file(globals_layout)
-                             .compute_file("src/shader/sph/prefix_sum.glsl")
-                             .build();
+        .compute_source(version)
+        .compute_file(compute_layout)
+        .compute_file(globals)
+        .compute_file(globals_layout)
+        .compute_file(keys_double_layout)
+        .compute_file("src/shader/sph/prefix_sum.glsl")
+        .build();
 
     ComputeShader bucket_sort = ComputeShader::builder()
-                             .compute_source(version)
-                             .compute_file(particle)
-                             .compute_file(globals)
-                             .compute_file(globals_layout)
-                             .compute_file(hash)
-                             .compute_file(kernel)
-                             .compute_file("src/shader/sph/bucket_sort.glsl")
-                             .build();
+        .compute_source(version)
+        .compute_file(compute_layout)
+        .compute_file(particle)
+        .compute_file(globals)
+        .compute_file(particles_double_layout)
+        .compute_file(globals_layout)
+        .compute_file(keys_readonly_layout)
+        .compute_file(hash)
+        .compute_file(kernel)
+        .compute_file("src/shader/sph/bucket_sort.glsl")
+        .build();
+
     ComputeShader density = ComputeShader::builder()
-                             .compute_source(version)
-                             .compute_file(particle)
-                             .compute_file(globals)
-                             .compute_file(globals_layout)
-                             .compute_file(hash)
-                             .compute_file(kernel)
-                             .compute_file(for_neighbor)
-                             .compute_file("src/shader/sph/density.glsl")
-                             .build();
+        .compute_source(version)
+        .compute_file(compute_layout)
+        .compute_file(particle)
+        .compute_file(globals)
+        .compute_file(particles_double_layout)
+        .compute_file(globals_layout)
+        .compute_file(keys_readonly_layout)
+        .compute_file(hash)
+        .compute_file(kernel)
+        .compute_file(for_neighbor)
+        .compute_file("src/shader/sph/density.glsl")
+        .build();
 
     ComputeShader pressure_force = ComputeShader::builder()
-                             .compute_source(version)
-                             .compute_file(particle)
-                             .compute_file(globals)
-                             .compute_file(globals_layout)
-                             .compute_file(hash)
-                             .compute_file(kernel)
-                             .compute_file(for_neighbor)
-                             .compute_file("src/shader/sph/pressure_force.glsl")
-                             .build();
+        .compute_source(version)
+        .compute_file(compute_layout)
+        .compute_file(particle)
+        .compute_file(globals)
+        .compute_file(particles_double_layout)
+        .compute_file(globals_layout)
+        .compute_file(keys_readonly_layout)
+        .compute_file(hash)
+        .compute_file(kernel)
+        .compute_file(for_neighbor)
+        .compute_file("src/shader/sph/pressure_force.glsl")
+        .build();
 
     ComputeShader update_position = ComputeShader::builder()
-                             .compute_source(version)
-                             .compute_file(particle)
-                             .compute_file(globals)
-                             .compute_file(globals_layout)
-                             .compute_file(hash)
-                             .compute_file(kernel)
-                             .compute_file("src/shader/sph/update_position.glsl")
-                             .build();
+        .compute_source(version)
+        .compute_file(compute_layout)
+        .compute_file(particle)
+        .compute_file(globals)
+        .compute_file(particles_double_layout)
+        .compute_file(globals_layout)
+        .compute_file(hash)
+        .compute_file(kernel)
+        .compute_file("src/shader/sph/update_position.glsl")
+        .build();
 
     ComputeShader viscosity = ComputeShader::builder()
         .compute_source(version)
+        .compute_file(compute_layout)
         .compute_file(particle)
         .compute_file(globals)
+        .compute_file(particles_double_layout)
         .compute_file(globals_layout)
+        .compute_file(keys_readonly_layout)
         .compute_file(hash)
         .compute_file(kernel)
         .compute_file(for_neighbor)
