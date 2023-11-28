@@ -226,10 +226,8 @@ int main(void) {
 
     bool object_buffer_regenerate = true;
     uint prev_object_count = 0;
-    uint object_buffer_size = 0;
 
     bool key_buffer_regenerate = true;
-    uint key_buffer_size = 0;
 
     bool paused = true;
     auto prev_frame = std::chrono::steady_clock::now();
@@ -311,9 +309,7 @@ int main(void) {
         globals_ssbo.bind();
 
         if (object_buffer_regenerate) {
-            if (object_buffer_size < G.object_count) {
-                output_particles.resize(G.object_count * sizeof(Particle));
-            }
+            output_particles.resize(G.object_count * sizeof(Particle));
             if (prev_object_count < G.object_count) {
                 glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
                 input_particles.bind();
@@ -325,20 +321,13 @@ int main(void) {
                 std::swap(input_particles.buffer_id, output_particles.buffer_id);
             }
             prev_object_count = G.object_count;
-            if (object_buffer_size < G.object_count) {
-                glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-                output_particles.resize(G.object_count * sizeof(Particle));
-                object_buffer_size = G.object_count;
-            }
+            output_particles.resize(G.object_count * sizeof(Particle));
             object_buffer_regenerate = false;
         }
 
         if (key_buffer_regenerate) {
-            if (key_buffer_size < G.key_count + 1) {
-                input_keys.resize((G.key_count + 1) * sizeof(uint));
-                output_keys.resize((G.key_count + 1) * sizeof(uint));
-                key_buffer_size = G.key_count + 1;
-            }
+            input_keys.resize((G.key_count + 1) * sizeof(uint));
+            output_keys.resize((G.key_count + 1) * sizeof(uint));
             key_buffer_regenerate = false;
         }
 
