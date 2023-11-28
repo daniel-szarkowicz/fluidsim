@@ -307,7 +307,7 @@ int main(void) {
         globals_ssbo.bind();
 
         if (object_buffer_regenerate) {
-            particles.output.resize(G.object_count * sizeof(Particle));
+            particles.output->resize(G.object_count * sizeof(Particle));
             if (prev_object_count < G.object_count) {
                 glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
                 particles.bind_and_swap();
@@ -317,20 +317,20 @@ int main(void) {
                 );
             }
             prev_object_count = G.object_count;
-            particles.output.resize(G.object_count * sizeof(Particle));
+            particles.output->resize(G.object_count * sizeof(Particle));
             object_buffer_regenerate = false;
         }
 
         if (key_buffer_regenerate) {
-            keys.input.resize((G.key_count + 1) * sizeof(uint));
-            keys.output.resize((G.key_count + 1) * sizeof(uint));
+            keys.input->resize((G.key_count + 1) * sizeof(uint));
+            keys.output->resize((G.key_count + 1) * sizeof(uint));
             key_buffer_regenerate = false;
         }
 
         if (G.key_count > 0) {
             // zero fill input key counts
             glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-            keys.input.bind();
+            keys.input->bind();
             clear_keys.dispatch_executions(G.key_count + 1);
 
             // count keys
@@ -348,7 +348,7 @@ int main(void) {
 
             // bucket sort using key indicies
             glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-            keys.input.bind();
+            keys.input->bind();
             particles.bind_and_swap();
             bucket_sort.dispatch_executions(G.object_count);
         }
@@ -365,7 +365,7 @@ int main(void) {
         particle_shader.uniform("view", camera.view());
         particle_shader.uniform("projection", camera.projection());
         glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-        particles.input.bind();
+        particles.input->bind();
         glBindVertexArray(empty_vao);
         glDrawArraysInstanced(GL_POINTS, 0, 1, G.object_count);
 

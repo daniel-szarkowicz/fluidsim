@@ -24,12 +24,13 @@ void SSBO::bind() {
 }
 
 SSBOPair::SSBOPair(GLuint input_binding, GLuint output_binding, GLenum usage)
-    : input(input_binding, usage), output(output_binding, usage) {}
+    : input(std::make_shared<SSBO>(input_binding, usage)),
+      output(std::make_shared<SSBO>(output_binding, usage)) {}
 
 void SSBOPair::bind_and_swap() {
-    input.bind();
-    output.bind();
-    auto tmp = input.buffer_id;
-    input.buffer_id = output.buffer_id;
-    output.buffer_id = tmp;
+    input->bind();
+    output->bind();
+    auto tmp = input->buffer_id;
+    input->buffer_id = output->buffer_id;
+    output->buffer_id = tmp;
 }

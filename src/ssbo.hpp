@@ -1,4 +1,7 @@
+#pragma once
+
 #include <GL/glew.h>
+#include <memory>
 
 class SSBO {
 public:
@@ -16,8 +19,8 @@ public:
 
 class SSBOPair {
 public:
-    SSBO input;
-    SSBO output;
+    std::shared_ptr<SSBO> input;
+    std::shared_ptr<SSBO> output;
 
     SSBOPair(GLuint input_binding, GLuint output_binding,
              GLenum usage = GL_DYNAMIC_COPY);
