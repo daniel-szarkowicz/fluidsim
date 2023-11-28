@@ -13,3 +13,16 @@ public:
 
     SSBO(const SSBO&) = delete;
 };
+
+class SSBOPair {
+public:
+    SSBO input;
+    SSBO output;
+
+    SSBOPair(GLuint input_binding, GLuint output_binding,
+             GLenum usage = GL_DYNAMIC_COPY);
+
+    void bind_and_swap();
+
+    SSBOPair(const SSBOPair&) = delete;
+};

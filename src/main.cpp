@@ -218,11 +218,9 @@ int main(void) {
     G.sigma_viscosity = 0.3;
     G.near_density_multiplier = 2;
 
-    SSBO input_particles = SSBO(3, GL_DYNAMIC_COPY);
-    SSBO output_particles = SSBO(4, GL_DYNAMIC_COPY);
+    SSBOPair particles(3, 4, GL_DYNAMIC_COPY);
 
-    SSBO input_keys = SSBO(2, GL_DYNAMIC_COPY);
-    SSBO output_keys = SSBO(5, GL_DYNAMIC_COPY);
+    SSBOPair keys(2, 5, GL_DYNAMIC_COPY);
 
     bool object_buffer_regenerate = true;
     uint prev_object_count = 0;
@@ -309,67 +307,57 @@ int main(void) {
         globals_ssbo.bind();
 
         if (object_buffer_regenerate) {
-            output_particles.resize(G.object_count * sizeof(Particle));
+            particles.output.resize(G.object_count * sizeof(Particle));
             if (prev_object_count < G.object_count) {
                 glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-                input_particles.bind();
-                output_particles.bind();
+                particles.bind_and_swap();
                 generate_particles.uniform("prev_object_count", prev_object_count);
                 generate_particles.dispatch_executions(
                     G.object_count
                 );
-                std::swap(input_particles.buffer_id, output_particles.buffer_id);
             }
             prev_object_count = G.object_count;
-            output_particles.resize(G.object_count * sizeof(Particle));
+            particles.output.resize(G.object_count * sizeof(Particle));
             object_buffer_regenerate = false;
         }
 
         if (key_buffer_regenerate) {
-            input_keys.resize((G.key_count + 1) * sizeof(uint));
-            output_keys.resize((G.key_count + 1) * sizeof(uint));
+            keys.input.resize((G.key_count + 1) * sizeof(uint));
+            keys.output.resize((G.key_count + 1) * sizeof(uint));
             key_buffer_regenerate = false;
         }
 
         if (G.key_count > 0) {
             // zero fill input key counts
             glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-            input_keys.bind();
+            keys.input.bind();
             clear_keys.dispatch_executions(G.key_count + 1);
 
             // count keys
             glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-            input_particles.bind();
-            output_particles.bind();
+            particles.bind_and_swap();
             predict_and_hash.dispatch_executions(G.object_count);
-            std::swap(input_particles.buffer_id, output_particles.buffer_id);
 
             // calculate key indicies
             for (uint offset = 1; offset < G.key_count + 1; offset *= 2) {
                 glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-                input_keys.bind();
-                output_keys.bind();
+                keys.bind_and_swap();
                 prefix_sum.uniform("offset", offset);
                 prefix_sum.dispatch_executions(G.key_count + 1);
-                std::swap(input_keys.buffer_id, output_keys.buffer_id);
             }
 
             // bucket sort using key indicies
             glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-            input_keys.bind();
-            input_particles.bind();
-            output_particles.bind();
+            keys.input.bind();
+            particles.bind_and_swap();
             bucket_sort.dispatch_executions(G.object_count);
-            std::swap(input_particles.buffer_id, output_particles.buffer_id);
         }
         if (!paused) {
 
             for (auto shader : compute_pipeline) {
                 glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-                input_particles.bind();
-                output_particles.bind();
+                particles.bind_and_swap();
                 shader.dispatch_executions(G.object_count);
-                std::swap(input_particles.buffer_id, output_particles.buffer_id);
             }
         }
 
@@ -377,7 +365,7 @@ int main(void) {
         particle_shader.uniform("view", camera.view());
         particle_shader.uniform("projection", camera.projection());
         glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-        input_particles.bind();
+        particles.input.bind();
         glBindVertexArray(empty_vao);
         glDrawArraysInstanced(GL_POINTS, 0, 1, G.object_count);
 

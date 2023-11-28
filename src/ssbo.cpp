@@ -22,3 +22,14 @@ void SSBO::set_data(GLsizeiptr data_size, void* data) {
 void SSBO::bind() {
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, binding, buffer_id);
 }
+
+SSBOPair::SSBOPair(GLuint input_binding, GLuint output_binding, GLenum usage)
+    : input(input_binding, usage), output(output_binding, usage) {}
+
+void SSBOPair::bind_and_swap() {
+    input.bind();
+    output.bind();
+    auto tmp = input.buffer_id;
+    input.buffer_id = output.buffer_id;
+    output.buffer_id = tmp;
+}
