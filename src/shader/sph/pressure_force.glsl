@@ -14,6 +14,10 @@ layout(std430, binding = 2) readonly buffer keys {
     uint key_map[];
 };
 
+float density_to_near_pressure(float near_density){
+    return G.near_density_multiplier * near_density;
+}
+
 void main() {
     uint i = gl_GlobalInvocationID.x;
     if (i >= G.object_count) {
@@ -32,6 +36,9 @@ void main() {
             float pressure = (p[i].pressure + neighbor.pressure)/2;
             pressure_force -= pressure * dir * kernel_derived(distance)
                 * neighbor.mass / neighbor.density;
+
+            float near_density_kernel_derived_value = -3/G.smoothing_radius * viscosity_kernel(distance) * viscosity_kernel(distance);       
+            pressure_force -= dir *  near_density_kernel_derived_value * 0.5 * (density_to_near_pressure(p[i].near_density) + density_to_near_pressure(neighbor.near_density)) / neighbor.near_density;
         }
     });
     Particle particle = p[i];
