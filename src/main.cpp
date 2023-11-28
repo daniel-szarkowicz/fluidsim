@@ -221,12 +221,8 @@ int main(void) {
     SSBO input_particles = SSBO(3, GL_DYNAMIC_COPY);
     SSBO output_particles = SSBO(4, GL_DYNAMIC_COPY);
 
-    GLuint input_keys;
-    GLuint output_keys;
-    glGenBuffers(1, &input_keys);
-    glGenBuffers(1, &output_keys);
-    glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, input_keys);
-    glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, output_keys);
+    SSBO input_keys = SSBO(2, GL_DYNAMIC_COPY);
+    SSBO output_keys = SSBO(5, GL_DYNAMIC_COPY);
 
     bool object_buffer_regenerate = true;
     uint prev_object_count = 0;
@@ -339,14 +335,8 @@ int main(void) {
 
         if (key_buffer_regenerate) {
             if (key_buffer_size < G.key_count + 1) {
-                glNamedBufferData(
-                    input_keys, (G.key_count + 1) * sizeof(uint),
-                    NULL, GL_DYNAMIC_COPY
-                );
-                glNamedBufferData(
-                    output_keys, (G.key_count + 1) * sizeof(uint),
-                    NULL, GL_DYNAMIC_COPY
-                );
+                input_keys.resize((G.key_count + 1) * sizeof(uint));
+                output_keys.resize((G.key_count + 1) * sizeof(uint));
                 key_buffer_size = G.key_count + 1;
             }
             key_buffer_regenerate = false;
@@ -355,7 +345,7 @@ int main(void) {
         if (G.key_count > 0) {
             // zero fill input key counts
             glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-            glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, input_keys);
+            input_keys.bind();
             clear_keys.dispatch_executions(G.key_count + 1);
 
             // count keys
@@ -368,16 +358,16 @@ int main(void) {
             // calculate key indicies
             for (uint offset = 1; offset < G.key_count + 1; offset *= 2) {
                 glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-                glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, input_keys);
-                glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, output_keys);
+                input_keys.bind();
+                output_keys.bind();
                 prefix_sum.uniform("offset", offset);
                 prefix_sum.dispatch_executions(G.key_count + 1);
-                std::swap(input_keys, output_keys);
+                std::swap(input_keys.buffer_id, output_keys.buffer_id);
             }
 
             // bucket sort using key indicies
             glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-            glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, input_keys);
+            input_keys.bind();
             input_particles.bind();
             output_particles.bind();
             bucket_sort.dispatch_executions(G.object_count);
