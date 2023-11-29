@@ -13,6 +13,8 @@ public:
 
     void use();
     template <typename... Args> void uniform(const char* name, Args...);
+
+    Shader(const Shader&) = delete;
 };
 
 class GraphicsShader: public Shader {

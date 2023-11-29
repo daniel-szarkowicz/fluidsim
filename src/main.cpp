@@ -165,14 +165,6 @@ int main(void) {
         .compute_file("src/shader/sph/viscosity.glsl")
         .build();
 
-
-    ComputeShader compute_pipeline[] = {
-        density,
-        viscosity,
-        pressure_force,
-        update_position,
-    };
-
     GLuint empty_vao;
     glCreateVertexArrays(1, &empty_vao);
 
@@ -229,9 +221,13 @@ int main(void) {
     prefix_sum.ssbopairs.insert(keys);
     bucket_sort.ssbopairs.insert(particles);
     bucket_sort.ssbos.insert(keys->input);
-    for (auto& shader : compute_pipeline) {
-        shader.ssbopairs.insert(particles);
-    }
+    density.ssbos.insert(keys->input);
+    density.ssbopairs.insert(particles);
+    viscosity.ssbos.insert(keys->input);
+    viscosity.ssbopairs.insert(particles);
+    pressure_force.ssbos.insert(keys->input);
+    pressure_force.ssbopairs.insert(particles);
+    update_position.ssbopairs.insert(particles);
 
     bool object_buffer_regenerate = true;
     uint prev_object_count = 0;
@@ -354,9 +350,10 @@ int main(void) {
         }
 
         if (!paused) {
-            for (auto& shader : compute_pipeline) {
-                shader.dispatch_executions(G.object_count);
-            }
+            density.dispatch_executions(G.object_count);
+            viscosity.dispatch_executions(G.object_count);
+            pressure_force.dispatch_executions(G.object_count);
+            update_position.dispatch_executions(G.object_count);
         }
 
         particle_shader.use();
