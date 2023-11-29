@@ -100,6 +100,25 @@ ComputeShader::ComputeShader(GLuint program_id)
 
 void Shader::use() { glUseProgram(program_id); }
 
+GLuint GraphicsShader::empty_vao() {
+    static GLuint vao = 0;
+    if (vao == 0) {
+        glCreateVertexArrays(1, &vao);
+    }
+    return vao;
+}
+
+void GraphicsShader::draw_instanced(GLenum type, GLsizei vertex_count,
+                                    GLsizei instance_count) {
+    use();
+    glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+    for (auto ssbo : ssbos) {
+        ssbo->bind();
+    }
+    glBindVertexArray(empty_vao());
+    glDrawArraysInstanced(type, 0, vertex_count, instance_count);
+}
+
 void ComputeShader::dispatch_workgroups(GLuint x, GLuint y, GLuint z) {
     use();
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);

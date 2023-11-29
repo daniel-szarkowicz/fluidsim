@@ -18,7 +18,10 @@ public:
 };
 
 class GraphicsShader: public Shader {
+    static GLuint empty_vao();
 public:
+    std::unordered_set<std::shared_ptr<SSBO>> ssbos;
+
     GraphicsShader(GLuint program_id);
 
     class builder {
@@ -36,6 +39,9 @@ public:
         builder& fragment_file(const char* file);
         GraphicsShader build();
     };
+
+    void draw_instanced(GLenum type, GLsizei vertex_count,
+                        GLsizei instance_count);
 };
 
 class ComputeShader: public Shader {

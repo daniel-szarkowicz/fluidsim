@@ -2,7 +2,6 @@
 #include "imgui.h"
 #include "shader.hpp"
 #include "context.hpp"
-#include <GL/glew.h>
 #include <chrono>
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -168,7 +167,7 @@ int main(void) {
     GLuint empty_vao;
     glCreateVertexArrays(1, &empty_vao);
 
-    SSBO box_ssbo = SSBO(9, GL_STATIC_DRAW);
+    auto box_ssbo = std::make_shared<SSBO>(9, GL_STATIC_DRAW);
     glm::vec4 points[] = {
         {-1, 1, -1, 1},  {-1, 1, 1, 1},   {-1, 1, -1, 1},  {1, 1, -1, 1},
         {1, 1, 1, 1},    {-1, 1, 1, 1},   {1, 1, 1, 1},    {1, 1, -1, 1},
@@ -177,8 +176,8 @@ int main(void) {
         {-1, 1, -1, 1},  {-1, -1, -1, 1}, {1, 1, -1, 1},   {1, -1, -1, 1},
         {-1, 1, 1, 1},   {-1, -1, 1, 1},  {1, 1, 1, 1},    {1, -1, 1, 1},
     };
-    box_ssbo.resize(sizeof(points));
-    box_ssbo.set_data(sizeof(points), points);
+    box_ssbo->resize(sizeof(points));
+    box_ssbo->set_data(sizeof(points), points);
 
     SSBO globals_ssbo = SSBO(1, GL_DYNAMIC_DRAW);
     globals_ssbo.resize(sizeof(Globals));
@@ -207,6 +206,9 @@ int main(void) {
     auto particles = std::make_shared<SSBOPair>(3, 4, GL_DYNAMIC_COPY);
 
     auto keys = std::make_shared<SSBOPair>(2, 5, GL_DYNAMIC_COPY);
+
+    particle_shader.ssbos.insert(particles->input);
+    box_shader.ssbos.insert(box_ssbo);
 
     generate_particles.ssbopairs.insert(particles);
     clear_keys.ssbos.insert(keys->input);
@@ -350,19 +352,12 @@ int main(void) {
             update_position.dispatch_executions(G.object_count);
         }
 
-        particle_shader.use();
         particle_shader.uniform("view", camera.view());
         particle_shader.uniform("projection", camera.projection());
-        glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-        particles->input->bind();
-        glBindVertexArray(empty_vao);
-        glDrawArraysInstanced(GL_POINTS, 0, 1, G.object_count);
+        particle_shader.draw_instanced(GL_POINTS, 1, G.object_count);
 
-        box_shader.use();
         box_shader.uniform("view_projection", camera.view_projection());
-        box_ssbo.bind();
-        glBindVertexArray(empty_vao);
-        glDrawArraysInstanced(GL_LINES, 0, 2, 12);
+        box_shader.draw_instanced(GL_LINES, 2, 12);
     });
 
     Context::uninit();
