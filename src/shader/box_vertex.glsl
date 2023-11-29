@@ -1,8 +1,12 @@
+layout(std430, binding = 9) readonly buffer box_ssbo {
+    vec4 box[24];
+};
+
 uniform mat4 view_projection;
 
-in vec3 position;
-
 void main() {
+    uint i = gl_InstanceID * 2 + gl_VertexID;
+    vec3 position = box[i].xyz;
     vec4 pos = vec4(0, 0, 0, 1);
     if (position.x < 0) {
         pos.x = -position.x * G.low_bound.x - G.particle_size;

@@ -168,23 +168,17 @@ int main(void) {
     GLuint empty_vao;
     glCreateVertexArrays(1, &empty_vao);
 
-    GLuint box_vao;
-    glCreateVertexArrays(1, &box_vao);
-    glBindVertexArray(box_vao);
-    GLuint box_vbo;
-    glGenBuffers(1, &box_vbo);
-    glBindBuffer(GL_ARRAY_BUFFER, box_vbo);
-    vec3 points[] = {
-        vec3(-1, 1, -1),  vec3(-1, 1, 1),   vec3(-1, 1, -1),  vec3(1, 1, -1),
-        vec3(1, 1, 1),    vec3(-1, 1, 1),   vec3(1, 1, 1),    vec3(1, 1, -1),
-        vec3(-1, -1, -1), vec3(-1, -1, 1),  vec3(-1, -1, -1), vec3(1, -1, -1),
-        vec3(1, -1, 1),   vec3(-1, -1, 1),  vec3(1, -1, 1),   vec3(1, -1, -1),
-        vec3(-1, 1, -1),  vec3(-1, -1, -1), vec3(1, 1, -1),   vec3(1, -1, -1),
-        vec3(-1, 1, 1),   vec3(-1, -1, 1),  vec3(1, 1, 1),    vec3(1, -1, 1),
+    SSBO box_ssbo = SSBO(9, GL_STATIC_DRAW);
+    glm::vec4 points[] = {
+        {-1, 1, -1, 1},  {-1, 1, 1, 1},   {-1, 1, -1, 1},  {1, 1, -1, 1},
+        {1, 1, 1, 1},    {-1, 1, 1, 1},   {1, 1, 1, 1},    {1, 1, -1, 1},
+        {-1, -1, -1, 1}, {-1, -1, 1, 1},  {-1, -1, -1, 1}, {1, -1, -1, 1},
+        {1, -1, 1, 1},   {-1, -1, 1, 1},  {1, -1, 1, 1},   {1, -1, -1, 1},
+        {-1, 1, -1, 1},  {-1, -1, -1, 1}, {1, 1, -1, 1},   {1, -1, -1, 1},
+        {-1, 1, 1, 1},   {-1, -1, 1, 1},  {1, 1, 1, 1},    {1, -1, 1, 1},
     };
-    glBufferData(GL_ARRAY_BUFFER, sizeof(points), points, GL_STATIC_DRAW);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+    box_ssbo.resize(sizeof(points));
+    box_ssbo.set_data(sizeof(points), points);
 
     SSBO globals_ssbo = SSBO(1, GL_DYNAMIC_DRAW);
     globals_ssbo.resize(sizeof(Globals));
@@ -366,8 +360,9 @@ int main(void) {
 
         box_shader.use();
         box_shader.uniform("view_projection", camera.view_projection());
-        glBindVertexArray(box_vao);
-        glDrawArrays(GL_LINES, 0, 24);
+        box_ssbo.bind();
+        glBindVertexArray(empty_vao);
+        glDrawArraysInstanced(GL_LINES, 0, 2, 12);
     });
 
     Context::uninit();
