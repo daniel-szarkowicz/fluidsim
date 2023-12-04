@@ -38,6 +38,21 @@ builder_file(GraphicsShader, geometry_file, geometry_src);
 builder_file(GraphicsShader, fragment_file, fragment_src);
 builder_file(ComputeShader, compute_file, compute_src);
 
+GraphicsShader::builder& GraphicsShader::builder::ssbo(std::shared_ptr<SSBO> ssbo) {
+    ssbos.insert(ssbo);
+    return *this;
+}
+
+ComputeShader::builder& ComputeShader::builder::ssbo(std::shared_ptr<SSBO> ssbo) {
+    ssbos.insert(ssbo);
+    return *this;
+}
+
+ComputeShader::builder& ComputeShader::builder::ssbopair(std::shared_ptr<SSBOPair> ssbopair) {
+    ssbopairs.insert(ssbopair);
+    return *this;
+}
+
 #define load_shader(shader_id, src, fname, type)                               \
     GLuint shader_id;                                                          \
     if (fname) {                                                               \
@@ -82,7 +97,7 @@ GraphicsShader GraphicsShader::builder::build() {
         attach_shader(program_id, geometry_source, GL_GEOMETRY_SHADER);
     }
     glLinkProgram(program_id);
-    return GraphicsShader(program_id);
+    return GraphicsShader(program_id, ssbos);
 }
 
 ComputeShader ComputeShader::builder::build() {
@@ -90,13 +105,21 @@ ComputeShader ComputeShader::builder::build() {
     GLuint program_id = glCreateProgram();
     attach_shader(program_id, compute_source, GL_COMPUTE_SHADER);
     glLinkProgram(program_id);
-    return ComputeShader(program_id);
+    return ComputeShader(program_id, ssbos, ssbopairs);
 }
 
 Shader::Shader(GLuint program_id): program_id(program_id) {}
-GraphicsShader::GraphicsShader(GLuint program_id): Shader(program_id) {}
-ComputeShader::ComputeShader(GLuint program_id)
-    : Shader(program_id), ssbos(), ssbopairs() {}
+
+GraphicsShader::GraphicsShader(
+    GLuint program_id,
+    std::unordered_set<std::shared_ptr<SSBO>> ssbos
+): Shader(program_id), ssbos(ssbos) {}
+
+ComputeShader::ComputeShader(
+    GLuint program_id,
+    std::unordered_set<std::shared_ptr<SSBO>> ssbos,
+    std::unordered_set<std::shared_ptr<SSBOPair>> ssbopairs
+) : Shader(program_id), ssbos(ssbos), ssbopairs(ssbopairs) {}
 
 void Shader::use() { glUseProgram(program_id); }
 

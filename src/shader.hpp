@@ -19,15 +19,19 @@ public:
 
 class GraphicsShader: public Shader {
     static GLuint empty_vao();
-public:
     std::unordered_set<std::shared_ptr<SSBO>> ssbos;
 
-    GraphicsShader(GLuint program_id);
+public:
+    GraphicsShader(
+        GLuint program_id,
+        std::unordered_set<std::shared_ptr<SSBO>> ssbos
+    );
 
     class builder {
         std::ostringstream vertex_src;
         std::ostringstream geometry_src;
         std::ostringstream fragment_src;
+        std::unordered_set<std::shared_ptr<SSBO>> ssbos;
 
     public:
         builder();
@@ -37,6 +41,7 @@ public:
         builder& geometry_file(const char* file);
         builder& fragment_source(const char* source);
         builder& fragment_file(const char* file);
+        builder& ssbo(std::shared_ptr<SSBO> ssbo);
         GraphicsShader build();
     };
 
@@ -45,18 +50,27 @@ public:
 };
 
 class ComputeShader: public Shader {
-public:
     std::unordered_set<std::shared_ptr<SSBO>> ssbos;
     std::unordered_set<std::shared_ptr<SSBOPair>> ssbopairs;
 
-    ComputeShader(GLuint program_id);
+public:
+    ComputeShader(
+        GLuint program_id,
+        std::unordered_set<std::shared_ptr<SSBO>> ssbos,
+        std::unordered_set<std::shared_ptr<SSBOPair>> ssbopairs
+    );
 
     class builder {
+        std::ostringstream compute_src;
+        std::unordered_set<std::shared_ptr<SSBO>> ssbos;
+        std::unordered_set<std::shared_ptr<SSBOPair>> ssbopairs;
+
     public:
         builder();
-        std::ostringstream compute_src;
         builder& compute_source(const char* source);
         builder& compute_file(const char* file);
+        builder& ssbo(std::shared_ptr<SSBO> ssbo);
+        builder& ssbopair(std::shared_ptr<SSBOPair> ssbopair);
         ComputeShader build();
     };
 

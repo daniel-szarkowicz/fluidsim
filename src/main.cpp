@@ -16,6 +16,11 @@ using glm::ivec3;
 int main(void) {
     Context::init(1280, 720, "fluidsim");
 
+    auto box_ssbo = std::make_shared<SSBO>(9, GL_STATIC_DRAW);
+    auto globals_ssbo = std::make_shared<SSBO>(1, GL_DYNAMIC_DRAW);
+    auto particles = std::make_shared<SSBOPair>(3, 4, GL_DYNAMIC_COPY);
+    auto keys = std::make_shared<SSBOPair>(2, 5, GL_DYNAMIC_COPY);
+
     const char* version = "#version 430";
     const char* particle = "src/common/particle.glsl";
     const char* globals = "src/common/globals.glsl";
@@ -34,9 +39,9 @@ int main(void) {
         .vertex_source(version)
         .vertex_file(particle)
         .vertex_file(globals)
-        .vertex_file(particles_readonly_layout)
-        .vertex_file(globals_layout)
-        .vertex_file(keys_readonly_layout)
+        .vertex_file(particles_readonly_layout).ssbo(particles->input)
+        .vertex_file(globals_layout).ssbo(globals_ssbo)
+        .vertex_file(keys_readonly_layout).ssbo(keys->input)
         .vertex_file(hash)
         .vertex_file(for_neighbor)
         .vertex_file("src/shader/particle_vertex.glsl")
@@ -49,8 +54,8 @@ int main(void) {
     GraphicsShader box_shader = GraphicsShader::builder()
         .vertex_source(version)
         .vertex_file(globals)
-        .vertex_file(globals_layout)
-        .vertex_file("src/shader/box_vertex.glsl")
+        .vertex_file(globals_layout).ssbo(globals_ssbo)
+        .vertex_file("src/shader/box_vertex.glsl").ssbo(box_ssbo)
         .fragment_source(version)
         .fragment_file("src/shader/box_fragment.glsl")
         .build();
@@ -60,8 +65,8 @@ int main(void) {
         .compute_file(compute_layout)
         .compute_file(particle)
         .compute_file(globals)
-        .compute_file(particles_double_layout)
-        .compute_file(globals_layout)
+        .compute_file(particles_double_layout).ssbopair(particles)
+        .compute_file(globals_layout).ssbo(globals_ssbo)
         .compute_file(hash)
         .compute_file("src/shader/generate_particles.glsl")
         .build();
@@ -70,8 +75,8 @@ int main(void) {
         .compute_source(version)
         .compute_file(compute_layout)
         .compute_file(globals)
-        .compute_file(globals_layout)
-        .compute_file(keys_readwrite_layout)
+        .compute_file(globals_layout).ssbo(globals_ssbo)
+        .compute_file(keys_readwrite_layout).ssbo(keys->input)
         .compute_file("src/shader/sph/clear_keys.glsl")
         .build();
 
@@ -80,9 +85,9 @@ int main(void) {
         .compute_file(compute_layout)
         .compute_file(particle)
         .compute_file(globals)
-        .compute_file(particles_double_layout)
-        .compute_file(globals_layout)
-        .compute_file(keys_readwrite_layout)
+        .compute_file(particles_double_layout).ssbopair(particles)
+        .compute_file(globals_layout).ssbo(globals_ssbo)
+        .compute_file(keys_readwrite_layout).ssbo(keys->input)
         .compute_file(hash)
         .compute_file(kernel)
         .compute_file("src/shader/sph/predict_and_hash.glsl")
@@ -92,8 +97,8 @@ int main(void) {
         .compute_source(version)
         .compute_file(compute_layout)
         .compute_file(globals)
-        .compute_file(globals_layout)
-        .compute_file(keys_double_layout)
+        .compute_file(globals_layout).ssbo(globals_ssbo)
+        .compute_file(keys_double_layout).ssbopair(keys)
         .compute_file("src/shader/sph/prefix_sum.glsl")
         .build();
 
@@ -102,9 +107,9 @@ int main(void) {
         .compute_file(compute_layout)
         .compute_file(particle)
         .compute_file(globals)
-        .compute_file(particles_double_layout)
-        .compute_file(globals_layout)
-        .compute_file(keys_readonly_layout)
+        .compute_file(particles_double_layout).ssbopair(particles)
+        .compute_file(globals_layout).ssbo(globals_ssbo)
+        .compute_file(keys_readonly_layout).ssbo(keys->input)
         .compute_file(hash)
         .compute_file(kernel)
         .compute_file("src/shader/sph/bucket_sort.glsl")
@@ -115,9 +120,9 @@ int main(void) {
         .compute_file(compute_layout)
         .compute_file(particle)
         .compute_file(globals)
-        .compute_file(particles_double_layout)
-        .compute_file(globals_layout)
-        .compute_file(keys_readonly_layout)
+        .compute_file(particles_double_layout).ssbopair(particles)
+        .compute_file(globals_layout).ssbo(globals_ssbo)
+        .compute_file(keys_readonly_layout).ssbo(keys->input)
         .compute_file(hash)
         .compute_file(kernel)
         .compute_file(for_neighbor)
@@ -129,9 +134,9 @@ int main(void) {
         .compute_file(compute_layout)
         .compute_file(particle)
         .compute_file(globals)
-        .compute_file(particles_double_layout)
-        .compute_file(globals_layout)
-        .compute_file(keys_readonly_layout)
+        .compute_file(particles_double_layout).ssbopair(particles)
+        .compute_file(globals_layout).ssbo(globals_ssbo)
+        .compute_file(keys_readonly_layout).ssbo(keys->input)
         .compute_file(hash)
         .compute_file(kernel)
         .compute_file(for_neighbor)
@@ -143,8 +148,8 @@ int main(void) {
         .compute_file(compute_layout)
         .compute_file(particle)
         .compute_file(globals)
-        .compute_file(particles_double_layout)
-        .compute_file(globals_layout)
+        .compute_file(particles_double_layout).ssbopair(particles)
+        .compute_file(globals_layout).ssbo(globals_ssbo)
         .compute_file(hash)
         .compute_file(kernel)
         .compute_file("src/shader/sph/update_position.glsl")
@@ -155,19 +160,15 @@ int main(void) {
         .compute_file(compute_layout)
         .compute_file(particle)
         .compute_file(globals)
-        .compute_file(particles_double_layout)
-        .compute_file(globals_layout)
-        .compute_file(keys_readonly_layout)
+        .compute_file(particles_double_layout).ssbopair(particles)
+        .compute_file(globals_layout).ssbo(globals_ssbo)
+        .compute_file(keys_readonly_layout).ssbo(keys->input)
         .compute_file(hash)
         .compute_file(kernel)
         .compute_file(for_neighbor)
         .compute_file("src/shader/sph/viscosity.glsl")
         .build();
 
-    GLuint empty_vao;
-    glCreateVertexArrays(1, &empty_vao);
-
-    auto box_ssbo = std::make_shared<SSBO>(9, GL_STATIC_DRAW);
     glm::vec4 points[] = {
         {-1, 1, -1, 1},  {-1, 1, 1, 1},   {-1, 1, -1, 1},  {1, 1, -1, 1},
         {1, 1, 1, 1},    {-1, 1, 1, 1},   {1, 1, 1, 1},    {1, 1, -1, 1},
@@ -179,10 +180,6 @@ int main(void) {
     box_ssbo->resize(sizeof(points));
     box_ssbo->set_data(sizeof(points), points);
 
-    SSBO globals_ssbo = SSBO(1, GL_DYNAMIC_DRAW);
-    globals_ssbo.resize(sizeof(Globals));
-
-    auto camera = OrbitingCamera(vec3(0, 0, 0), 30, 0, 0);
     Globals G;
     G.gravity = vec3(0, -3, 0);
     G.low_bound = vec3(-30.5, -17, 0);
@@ -202,29 +199,9 @@ int main(void) {
     G.grid_size = G.high_bound_cell - G.low_bound_cell + ivec3(1, 1, 1);
     G.sigma_viscosity = 0.3;
     G.near_density_multiplier = 2;
+    globals_ssbo->resize(sizeof(G));
 
-    auto particles = std::make_shared<SSBOPair>(3, 4, GL_DYNAMIC_COPY);
-
-    auto keys = std::make_shared<SSBOPair>(2, 5, GL_DYNAMIC_COPY);
-
-    particle_shader.ssbos.insert(particles->input);
-    box_shader.ssbos.insert(box_ssbo);
-
-    generate_particles.ssbopairs.insert(particles);
-    clear_keys.ssbos.insert(keys->input);
-    predict_and_hash.ssbopairs.insert(particles);
-    predict_and_hash.ssbos.insert(keys->input);
-    prefix_sum.ssbopairs.insert(keys);
-    bucket_sort.ssbopairs.insert(particles);
-    bucket_sort.ssbos.insert(keys->input);
-    density.ssbos.insert(keys->input);
-    density.ssbopairs.insert(particles);
-    viscosity.ssbos.insert(keys->input);
-    viscosity.ssbopairs.insert(particles);
-    pressure_force.ssbos.insert(keys->input);
-    pressure_force.ssbopairs.insert(particles);
-    update_position.ssbopairs.insert(particles);
-
+    auto camera = OrbitingCamera(vec3(0, 0, 0), 30, 0, 0);
     bool object_buffer_regenerate = true;
     uint prev_object_count = 0;
 
@@ -306,8 +283,7 @@ int main(void) {
             G.visualization = VISUALIZATION_SPEED;
         }
         ImGui::End();
-        globals_ssbo.set_data(sizeof(G), &G);
-        globals_ssbo.bind();
+        globals_ssbo->set_data(sizeof(G), &G);
 
         if (object_buffer_regenerate) {
             particles->output->resize(G.object_count * sizeof(Particle));
