@@ -2,10 +2,10 @@
 #include "imgui.h"
 #include "shader.hpp"
 #include "context.hpp"
-#include <GL/glew.h>
 #include <chrono>
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include "ssbo.hpp"
 
 using glm::vec3;
 using glm::ivec3;
@@ -16,158 +16,170 @@ using glm::ivec3;
 int main(void) {
     Context::init(1280, 720, "fluidsim");
 
+    auto box_ssbo = std::make_shared<SSBO>(9, GL_STATIC_DRAW);
+    auto globals_ssbo = std::make_shared<SSBO>(1, GL_DYNAMIC_DRAW);
+    auto particles = std::make_shared<SSBOPair>(3, 4, GL_DYNAMIC_COPY);
+    auto keys = std::make_shared<SSBOPair>(2, 5, GL_DYNAMIC_COPY);
+
     const char* version = "#version 430";
     const char* particle = "src/common/particle.glsl";
     const char* globals = "src/common/globals.glsl";
+    const char* particles_readonly_layout = "src/shader/particles_readonly_layout.glsl";
+    const char* particles_double_layout = "src/shader/particles_double_layout.glsl";
     const char* globals_layout = "src/shader/globals_layout.glsl";
+    const char* keys_readonly_layout = "src/shader/keys_readonly_layout.glsl";
     const char* hash = "src/shader/hash.glsl";
     const char* kernel = "src/shader/sph/kernel.glsl";
     const char* for_neighbor = "src/shader/for_neighbor.glsl";
+    const char* compute_layout = "src/shader/compute_layout.glsl";
+    const char* keys_readwrite_layout = "src/shader/keys_readwrite_layout.glsl";
+    const char* keys_double_layout = "src/shader/keys_double_layout.glsl";
 
     GraphicsShader particle_shader = GraphicsShader::builder()
-                               .vertex_source(version)
-                               .vertex_file(particle)
-                               .vertex_file(globals)
-                               .vertex_file(globals_layout)
-                               .vertex_file(hash)
-                               .vertex_file(for_neighbor)
-                               .vertex_file("src/shader/particle_vertex.glsl")
-                               .geometry_source(version)
-                               .geometry_file("src/shader/particle_geometry.glsl")
-                               .fragment_source(version)
-                               .fragment_file("src/shader/particle_fragment.glsl")
-                               .build();
+        .vertex_source(version)
+        .vertex_file(particle)
+        .vertex_file(globals)
+        .vertex_file(particles_readonly_layout).ssbo(particles->input)
+        .vertex_file(globals_layout).ssbo(globals_ssbo)
+        .vertex_file(keys_readonly_layout).ssbo(keys->input)
+        .vertex_file(hash)
+        .vertex_file(for_neighbor)
+        .vertex_file("src/shader/particle_vertex.glsl")
+        .geometry_source(version)
+        .geometry_file("src/shader/particle_geometry.glsl")
+        .fragment_source(version)
+        .fragment_file("src/shader/particle_fragment.glsl")
+        .build();
 
     GraphicsShader box_shader = GraphicsShader::builder()
-                            .vertex_source(version)
-                            .vertex_file(globals)
-                            .vertex_file(globals_layout)
-                            .vertex_file("src/shader/box_vertex.glsl")
-                            .fragment_source(version)
-                            .fragment_file("src/shader/box_fragment.glsl")
-                            .build();
+        .vertex_source(version)
+        .vertex_file(globals)
+        .vertex_file(globals_layout).ssbo(globals_ssbo)
+        .vertex_file("src/shader/box_vertex.glsl").ssbo(box_ssbo)
+        .fragment_source(version)
+        .fragment_file("src/shader/box_fragment.glsl")
+        .build();
 
     ComputeShader generate_particles = ComputeShader::builder()
-                             .compute_source(version)
-                             .compute_file(particle)
-                             .compute_file(globals)
-                             .compute_file(globals_layout)
-                             .compute_file(hash)
-                             .compute_file("src/shader/generate_particles.glsl")
-                             .build();
+        .compute_source(version)
+        .compute_file(compute_layout)
+        .compute_file(particle)
+        .compute_file(globals)
+        .compute_file(particles_double_layout).ssbopair(particles)
+        .compute_file(globals_layout).ssbo(globals_ssbo)
+        .compute_file(hash)
+        .compute_file("src/shader/generate_particles.glsl")
+        .build();
 
     ComputeShader clear_keys = ComputeShader::builder()
-                             .compute_source(version)
-                             .compute_file(globals)
-                             .compute_file(globals_layout)
-                             .compute_file("src/shader/sph/clear_keys.glsl")
-                             .build();
+        .compute_source(version)
+        .compute_file(compute_layout)
+        .compute_file(globals)
+        .compute_file(globals_layout).ssbo(globals_ssbo)
+        .compute_file(keys_readwrite_layout).ssbo(keys->input)
+        .compute_file("src/shader/sph/clear_keys.glsl")
+        .build();
 
     ComputeShader predict_and_hash = ComputeShader::builder()
-                             .compute_source(version)
-                             .compute_file(particle)
-                             .compute_file(globals)
-                             .compute_file(globals_layout)
-                             .compute_file(hash)
-                             .compute_file(kernel)
-                             .compute_file("src/shader/sph/predict_and_hash.glsl")
-                             .build();
+        .compute_source(version)
+        .compute_file(compute_layout)
+        .compute_file(particle)
+        .compute_file(globals)
+        .compute_file(particles_double_layout).ssbopair(particles)
+        .compute_file(globals_layout).ssbo(globals_ssbo)
+        .compute_file(keys_readwrite_layout).ssbo(keys->input)
+        .compute_file(hash)
+        .compute_file(kernel)
+        .compute_file("src/shader/sph/predict_and_hash.glsl")
+        .build();
 
     ComputeShader prefix_sum = ComputeShader::builder()
-                             .compute_source(version)
-                             .compute_file(globals)
-                             .compute_file(globals_layout)
-                             .compute_file("src/shader/sph/prefix_sum.glsl")
-                             .build();
+        .compute_source(version)
+        .compute_file(compute_layout)
+        .compute_file(globals)
+        .compute_file(globals_layout).ssbo(globals_ssbo)
+        .compute_file(keys_double_layout).ssbopair(keys)
+        .compute_file("src/shader/sph/prefix_sum.glsl")
+        .build();
 
     ComputeShader bucket_sort = ComputeShader::builder()
-                             .compute_source(version)
-                             .compute_file(particle)
-                             .compute_file(globals)
-                             .compute_file(globals_layout)
-                             .compute_file(hash)
-                             .compute_file(kernel)
-                             .compute_file("src/shader/sph/bucket_sort.glsl")
-                             .build();
+        .compute_source(version)
+        .compute_file(compute_layout)
+        .compute_file(particle)
+        .compute_file(globals)
+        .compute_file(particles_double_layout).ssbopair(particles)
+        .compute_file(globals_layout).ssbo(globals_ssbo)
+        .compute_file(keys_readonly_layout).ssbo(keys->input)
+        .compute_file(hash)
+        .compute_file(kernel)
+        .compute_file("src/shader/sph/bucket_sort.glsl")
+        .build();
+
     ComputeShader density = ComputeShader::builder()
-                             .compute_source(version)
-                             .compute_file(particle)
-                             .compute_file(globals)
-                             .compute_file(globals_layout)
-                             .compute_file(hash)
-                             .compute_file(kernel)
-                             .compute_file(for_neighbor)
-                             .compute_file("src/shader/sph/density.glsl")
-                             .build();
+        .compute_source(version)
+        .compute_file(compute_layout)
+        .compute_file(particle)
+        .compute_file(globals)
+        .compute_file(particles_double_layout).ssbopair(particles)
+        .compute_file(globals_layout).ssbo(globals_ssbo)
+        .compute_file(keys_readonly_layout).ssbo(keys->input)
+        .compute_file(hash)
+        .compute_file(kernel)
+        .compute_file(for_neighbor)
+        .compute_file("src/shader/sph/density.glsl")
+        .build();
 
     ComputeShader pressure_force = ComputeShader::builder()
-                             .compute_source(version)
-                             .compute_file(particle)
-                             .compute_file(globals)
-                             .compute_file(globals_layout)
-                             .compute_file(hash)
-                             .compute_file(kernel)
-                             .compute_file(for_neighbor)
-                             .compute_file("src/shader/sph/pressure_force.glsl")
-                             .build();
+        .compute_source(version)
+        .compute_file(compute_layout)
+        .compute_file(particle)
+        .compute_file(globals)
+        .compute_file(particles_double_layout).ssbopair(particles)
+        .compute_file(globals_layout).ssbo(globals_ssbo)
+        .compute_file(keys_readonly_layout).ssbo(keys->input)
+        .compute_file(hash)
+        .compute_file(kernel)
+        .compute_file(for_neighbor)
+        .compute_file("src/shader/sph/pressure_force.glsl")
+        .build();
 
     ComputeShader update_position = ComputeShader::builder()
-                             .compute_source(version)
-                             .compute_file(particle)
-                             .compute_file(globals)
-                             .compute_file(globals_layout)
-                             .compute_file(hash)
-                             .compute_file(kernel)
-                             .compute_file("src/shader/sph/update_position.glsl")
-                             .build();
+        .compute_source(version)
+        .compute_file(compute_layout)
+        .compute_file(particle)
+        .compute_file(globals)
+        .compute_file(particles_double_layout).ssbopair(particles)
+        .compute_file(globals_layout).ssbo(globals_ssbo)
+        .compute_file(hash)
+        .compute_file(kernel)
+        .compute_file("src/shader/sph/update_position.glsl")
+        .build();
 
     ComputeShader viscosity = ComputeShader::builder()
         .compute_source(version)
+        .compute_file(compute_layout)
         .compute_file(particle)
         .compute_file(globals)
-        .compute_file(globals_layout)
+        .compute_file(particles_double_layout).ssbopair(particles)
+        .compute_file(globals_layout).ssbo(globals_ssbo)
+        .compute_file(keys_readonly_layout).ssbo(keys->input)
         .compute_file(hash)
         .compute_file(kernel)
         .compute_file(for_neighbor)
         .compute_file("src/shader/sph/viscosity.glsl")
         .build();
 
-
-    ComputeShader compute_pipeline[] = {
-        density,
-        viscosity,
-        pressure_force,
-        update_position,
+    glm::vec4 points[] = {
+        {-1, 1, -1, 1},  {-1, 1, 1, 1},   {-1, 1, -1, 1},  {1, 1, -1, 1},
+        {1, 1, 1, 1},    {-1, 1, 1, 1},   {1, 1, 1, 1},    {1, 1, -1, 1},
+        {-1, -1, -1, 1}, {-1, -1, 1, 1},  {-1, -1, -1, 1}, {1, -1, -1, 1},
+        {1, -1, 1, 1},   {-1, -1, 1, 1},  {1, -1, 1, 1},   {1, -1, -1, 1},
+        {-1, 1, -1, 1},  {-1, -1, -1, 1}, {1, 1, -1, 1},   {1, -1, -1, 1},
+        {-1, 1, 1, 1},   {-1, -1, 1, 1},  {1, 1, 1, 1},    {1, -1, 1, 1},
     };
+    box_ssbo->resize(sizeof(points));
+    box_ssbo->set_data(sizeof(points), points);
 
-    GLuint empty_vao;
-    glCreateVertexArrays(1, &empty_vao);
-
-    GLuint box_vao;
-    glCreateVertexArrays(1, &box_vao);
-    glBindVertexArray(box_vao);
-    GLuint box_vbo;
-    glGenBuffers(1, &box_vbo);
-    glBindBuffer(GL_ARRAY_BUFFER, box_vbo);
-    vec3 points[] = {
-        vec3(-1, 1, -1),  vec3(-1, 1, 1),   vec3(-1, 1, -1),  vec3(1, 1, -1),
-        vec3(1, 1, 1),    vec3(-1, 1, 1),   vec3(1, 1, 1),    vec3(1, 1, -1),
-        vec3(-1, -1, -1), vec3(-1, -1, 1),  vec3(-1, -1, -1), vec3(1, -1, -1),
-        vec3(1, -1, 1),   vec3(-1, -1, 1),  vec3(1, -1, 1),   vec3(1, -1, -1),
-        vec3(-1, 1, -1),  vec3(-1, -1, -1), vec3(1, 1, -1),   vec3(1, -1, -1),
-        vec3(-1, 1, 1),   vec3(-1, -1, 1),  vec3(1, 1, 1),    vec3(1, -1, 1),
-    };
-    glBufferData(GL_ARRAY_BUFFER, sizeof(points), points, GL_STATIC_DRAW);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
-
-    GLuint globals_ssbo;
-    glGenBuffers(1, &globals_ssbo);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, globals_ssbo);
-    glNamedBufferData(globals_ssbo, sizeof(Globals), NULL, GL_DYNAMIC_DRAW);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, globals_ssbo);
-
-    auto camera = OrbitingCamera(vec3(0, 0, 0), 30, 0, 0);
     Globals G;
     G.gravity = vec3(0, -3, 0);
     G.low_bound = vec3(-30.5, -17, 0);
@@ -187,27 +199,13 @@ int main(void) {
     G.grid_size = G.high_bound_cell - G.low_bound_cell + ivec3(1, 1, 1);
     G.sigma_viscosity = 0.3;
     G.near_density_multiplier = 2;
+    globals_ssbo->resize(sizeof(G));
 
-    GLuint input_particles;
-    GLuint output_particles;
-    glGenBuffers(1, &input_particles);
-    glGenBuffers(1, &output_particles);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, input_particles);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, output_particles);
-
-    GLuint input_keys;
-    GLuint output_keys;
-    glGenBuffers(1, &input_keys);
-    glGenBuffers(1, &output_keys);
-    glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, input_keys);
-    glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, output_keys);
-
+    auto camera = OrbitingCamera(vec3(0, 0, 0), 30, 0, 0);
     bool object_buffer_regenerate = true;
     uint prev_object_count = 0;
-    uint object_buffer_size = 0;
 
     bool key_buffer_regenerate = true;
-    uint key_buffer_size = 0;
 
     bool paused = true;
     auto prev_frame = std::chrono::steady_clock::now();
@@ -285,106 +283,57 @@ int main(void) {
             G.visualization = VISUALIZATION_SPEED;
         }
         ImGui::End();
-        glNamedBufferSubData(globals_ssbo, 0, sizeof(G), &G);
+        globals_ssbo->set_data(sizeof(G), &G);
 
         if (object_buffer_regenerate) {
-            if (object_buffer_size < G.object_count) {
-                glNamedBufferData(
-                    output_particles, G.object_count * sizeof(Particle),
-                    NULL, GL_DYNAMIC_COPY
-                );
-            }
+            particles->output->resize(G.object_count * sizeof(Particle));
             if (prev_object_count < G.object_count) {
-                glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-                glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, input_particles);
-                glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, output_particles);
                 generate_particles.uniform("prev_object_count", prev_object_count);
                 generate_particles.dispatch_executions(
                     G.object_count
                 );
-                std::swap(input_particles, output_particles);
             }
             prev_object_count = G.object_count;
-            if (object_buffer_size < G.object_count) {
-                glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-                glNamedBufferData(
-                    output_particles, G.object_count * sizeof(Particle),
-                    NULL, GL_DYNAMIC_COPY
-                );
-                object_buffer_size = G.object_count;
-            }
+            particles->output->resize(G.object_count * sizeof(Particle));
             object_buffer_regenerate = false;
         }
 
         if (key_buffer_regenerate) {
-            if (key_buffer_size < G.key_count + 1) {
-                glNamedBufferData(
-                    input_keys, (G.key_count + 1) * sizeof(uint),
-                    NULL, GL_DYNAMIC_COPY
-                );
-                glNamedBufferData(
-                    output_keys, (G.key_count + 1) * sizeof(uint),
-                    NULL, GL_DYNAMIC_COPY
-                );
-                key_buffer_size = G.key_count + 1;
-            }
+            keys->input->resize((G.key_count + 1) * sizeof(uint));
+            keys->output->resize((G.key_count + 1) * sizeof(uint));
             key_buffer_regenerate = false;
         }
 
         if (G.key_count > 0) {
             // zero fill input key counts
-            glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-            glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, input_keys);
             clear_keys.dispatch_executions(G.key_count + 1);
 
             // count keys
-            glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-            glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, input_particles);
-            glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, output_particles);
             predict_and_hash.dispatch_executions(G.object_count);
-            std::swap(input_particles, output_particles);
 
             // calculate key indicies
             for (uint offset = 1; offset < G.key_count + 1; offset *= 2) {
-                glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-                glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, input_keys);
-                glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, output_keys);
                 prefix_sum.uniform("offset", offset);
                 prefix_sum.dispatch_executions(G.key_count + 1);
-                std::swap(input_keys, output_keys);
             }
 
             // bucket sort using key indicies
-            glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-            glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, input_keys);
-            glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, input_particles);
-            glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, output_particles);
             bucket_sort.dispatch_executions(G.object_count);
-            std::swap(input_particles, output_particles);
         }
+
         if (!paused) {
-
-            for (auto shader : compute_pipeline) {
-                glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-                glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, input_particles);
-                glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, output_particles);
-                shader.dispatch_executions(G.object_count);
-                std::swap(input_particles, output_particles);
-            }
+            density.dispatch_executions(G.object_count);
+            viscosity.dispatch_executions(G.object_count);
+            pressure_force.dispatch_executions(G.object_count);
+            update_position.dispatch_executions(G.object_count);
         }
 
-        particle_shader.use();
         particle_shader.uniform("view", camera.view());
         particle_shader.uniform("projection", camera.projection());
-        glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, input_particles);
-        glBindVertexArray(empty_vao);
-        glDrawArraysInstanced(GL_POINTS, 0, 1, G.object_count);
+        particle_shader.draw_instanced(GL_POINTS, 1, G.object_count);
 
-        box_shader.use();
         box_shader.uniform("view_projection", camera.view_projection());
-        glBindVertexArray(box_vao);
-        glDrawArrays(GL_LINES, 0, 24);
+        box_shader.draw_instanced(GL_LINES, 2, 12);
     });
 
     Context::uninit();

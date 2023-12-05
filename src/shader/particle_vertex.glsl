@@ -1,13 +1,3 @@
-// uses particle from particle.glsl
-
-layout(std430, binding = 3) readonly buffer points {
-    Particle p[];
-};
-
-layout(std430, binding = 2) readonly buffer keys {
-    uint key_map[];
-};
-
 uniform mat4 view;
 
 out vec4 vColor;
