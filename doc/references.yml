@@ -1,0 +1,17 @@
+sph_tutorial:
+  type: article
+  title: Smoothed Particle Hydrodynamics Techniques for the Physics Based Simulation of Fluids and Solids
+  author: ["Dan Koschier", "Jan Bender", "Barbara Solenthaler", "Matthias Teschner"]
+  url: "https://sph-tutorial.physics-simulation.org/pdf/SPH_Tutorial.pdf"
+
+coding_adventures:
+  type: video
+  title: "Coding Adventure: Simulating Fluids"
+  author: ["Sebastian Lague"]
+  url: "https://www.youtube.com/watch?v=rSKMYc1CQHE"
+
+par_algs:
+  type: article
+  title: Data Parallel Algorithms
+  author: ["W. Daniel Hillis", "Guy L. Steele, Jr."]
+  url: "https://dl.acm.org/doi/10.1145/7902.7903"
