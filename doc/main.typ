@@ -177,21 +177,38 @@ Ezzel az algoritmussal már #todo[\~25000] részecske is szimulálható volt ér
 
 Sajnos mivel a hash függvény nem tökéletes, van amikor különböző celláknak azonos kulcsa van (akkor is ha a kulcsok száma sokkal több, mint a cellák száma), így nem csak a szomszédos cellák részecskéit vizsgáljuk meg, hanem néhány extrát is.
 
-#todo[kép]
+#todo[kép, amin sok kulccsal is van ütközés]
 
-#todo[
-  harmadik iteráció: domain-specific tökéletes "hash",
-  domain-ből kilógó cellák vágása,
-  ajánlott kulcs szám
-]
+=== Szimulációs határok kihasználása
 
-#todo[
-  További optimalizálási lehetőségek
-  + Cella méret és kernel sugár különválasztása
-  + Lokálisabb cella rendezés #todo[Hilbert-curve, Z-curve, ...]
-  + Ha több a cella kulcs, mint a részecskék, akkor #todo[Bitonic Sort]
-  + ...
-]
+Mivel a szimuláció tengelyhez igazított síkokkal van határolva, könnyű
+kiszámítani a cellák számát és könnyű kitalálni egy képletet, ami minden
+cellához egyedi kulcsot rendel. Tehát ha legalább annyi kulcs van, mint cella, akkor ütközésmentes lesz a szomszédos cellák vizsgálata.
+
+Eddig határon levő cellák vizsgálatakor a határon kívüli szomszédokat is
+megvizsgáltuk, sőt mivel a szimuláció 3 dimenzióra lett megírva, 2 dimenzióban
+18 cellát mindig feleslegesen vizsgáltunk.
+
+Ezzel a kettő változtatással már #todo[\~50000] részecskét lehet valós időben
+szimulálni.
+
+#todo[kép, amin kevés kulccsal sincs ütközés]
+
+=== További optimalizációs módszerek
+
+A szimuláció még az előző optimalizálások ellenére is túl sok felesleges
+részecskét vizsgál meg. Tökéletes eloszlás esetén 2 dimenzióban $~65%$-ban, 3
+dimenzióban $~84%$-ban felesleges a vizsgálat. Ezeket az arányokat a cellák
+méretének csökkentésével és a részecske sugarán kívül eső cellák ignorálásával
+lehetne javítani.
+
+Ha a cellák (kulcsok) száma több nagyságrenddel nagyobb lenne, mint a részecskék száma, akkor a vödrös rendezés helyett a #todo[Bitonic sort]-ot érdemes kipróbálni, mert annak a futásideje a részecskék számától függ, nem a cellákétól.
+
+Ha a részecskék és a cellák száma tovább növekedne, akkor a cellákat érdemes
+lehet egy jobb lokalitású sorrendben rendezni (pl. #todo[Hilbert curve,
+Z-curve]), mert így cache barátabb lenne az iterálás.
+
+#todo[további ötletek...]
 
 == Vizualizáció
 
