@@ -41,8 +41,8 @@
 == Optimalizáció
 
 A program #todo[nemhivatalos] célja valós idejű folyadékszimuláció volt, így
-ahhoz, hogy a részecskék számának növeléséhez különböző optimalizálási
-stratégiákat kellett alkalmazni.
+ahhoz, hogy minél részletesebb szimulálást hajthassunk végre, növelnünk kellett a szimulált részecskék számát. Ennek eléréséhez különböző optimalizálási
+stratégiákat kellett implementálni.
 
 _A mérések egy AMD RX Vega 6 mobil integrált videokártyán készültek.
 Nagy valószínűséggel modern dedikált videokártyákon a szimulálható részecskék
@@ -50,32 +50,32 @@ száma ezeknek a többszöröse lenne._
 
 === Optimalizáció nélkül GPU-n
 
-A program első verziója nem tartalmazott optimalizációt, a GPU sok felesleges
+A program első verziója nem tartalmazott optimalizációt, ezért a GPU sok felesleges
 számítást végzett. Ennek ellenére így is #todo[\~5000] részecskét lehetett
 szimulálni valós időben, ami jó kiindulási pont volt.
 
 Pszeudo kód:
 ```
-for részecske in részecskék:
-  for másik in részecskék:
-    a másik részecskéhez tartozó paraméterváltozás kiszámítása
-    részecske paraméterének frissítése
+for részecske_1 in részecskék:
+  for részecske_2 in részecskék:
+    a részecske_2-höz tartozó paraméterváltozások kiszámítása
+    részecske_1 paramétereinek frissítése
 ```
 
 #todo[kép]
 
 Ezen a kódon elég könnyű gyorsítani, ha kihasználjuk azt, hogy a smoothing
-kernel a sugarán kívül mindig 0, azaz a sugárnál távolabb levő részecskék nem
+kernel a sugarán kívül mindig 0-val tér vissza, azaz a smoothing radius-nél (sugárnál) távolabb levő részecskék nem
 befolyásolhatják egy adott részecskének a paramétereit. Ezzel az egyszerű
-javítással már #todo[\~9000] részecskék lehet szimulálni.
+javítással már #todo[\~9000] részecskét is tudtunk értelmes gyorsaság mellett szimulálni.
 
 Pszeudo kód:
 ```
-for részecske in részecskék:
-  for másik in részecskék:
-    ha távolság(részecske, másik) <= sugár:
-      a másik részecskéhez tartozó paraméterváltozás kiszámítása
-      részecske paraméterének frissítése
+for részecske_1 in részecskék:
+  for részecske_2 in részecskék:
+    ha távolság(részecske_1, részecske_2) <= smoothing_radius:
+      a részecske_2-höz tartozó paraméterváltozások kiszámítása
+      részecske_1 paramétereinek frissítése
 ```
 
 #todo[kép]
@@ -86,29 +86,26 @@ Az előző részben javított algoritmus még mindig minden részecskét megvizs
 csak a nagy részét rögtön eldobja. A további optimalizálások a megvizsgált
 részecskék számának csökkentésére fognak fókuszálni.
 
-Gyakran használt @sph_tutorial megoldás, hogy a szimulált teret cellákra bontjuk és minden részecske csak a szomszédos cellákban levő részecskéket vizsgálja, így csak 3x3(x3) cella tartalmát kell megvizsgálni.
+Gyakran használt megoldás@sph_tutorial, hogy a szimulált teret cellákra bontjuk és minden részecske csak a szomszédos cellákban levő részecskéket vizsgálja, így csak 3x3(x3) cella tartalmát kell megvizsgálni.
 
-Az első megoldás egy vödrös hash szerű adatstruktúrát használ, csak mivel egy
-cellában a részecskék száma 0-tól a részecskék számáig akármennyi lehet és az
-OpenGL nem támogat dinamikus memória foglalást így a részecskéket kulcs szerint
-rendezzük és egy segéd tömb tárolja, hogy az egy kulcshoz tartozó részecskék
-mettől meddig tartanak. A kulcsokat egy generikus hash függvény @hash
-segítségével számoljuk ki.
+Az első megoldás egy vödrös hash szerű adatstruktúrát használ.
+Ezzel a megoldással az volt a kihívás, hogy egy cellában a részecskék száma 0-tól a részecskék számáig terjedhet és az OpenGL nem támogat dinamikus memória foglalást. A probléma áthidalására egy megoldást ad az, ha a részecskéket kulcsaik szerint rendezzük, és egy segéd tömbben eltároljuk, hogy az egy kulcshoz tartozó részecskék mettől meddig tartanak. A kulcsokat egy generikus hash függvény@hash segítségével számoljuk ki.
 
 #todo[ábra az adatstruktúráról]
 
-Az algoritmus a vödrös rendezésnek egy párhuzamos változata, 3 részből áll:
-1. Kulcshoz tartozó részecskék megszámolása és a részecsék kucson belüli index kiszámítása (párhuzamosan, atomi számlálókkal)
-2. Kulcshoz tartozó indexek kiszámolása (párhuzamos prefix sum @par_algs)
-3. Részecskék áthelyezése a megfelelő helyre
+Maga az algoritmus a vödrös rendezésnek egy párhuzamos változata, 3 részből áll:
++ A kulcshoz tartozó részecskék megszámolása és a részecsék kulcson belüli indexének kiszámítása (párhuzamosan, atomi számlálókkal)
++ Kulcshoz tartozó indexek kiszámolása (párhuzamos prefix sum@par_algs)
++ Részecskék áthelyezése a megfelelő helyre
 
+#todo[n és k paraméterek megnevezése]
 Ez az algoritmut $O(n+k)$ extra memóriát igényel, de ez nem baj, mert általában
 $n >> k$ és a szimuláció eddig is 2 tömböt használt a részecskékhez, szóval
 csak a kulcsoknak kell új memóriát foglalni.
 
 Ezután minden részecskéhez már csak a környező cellák részecskéit kell megvizsgálni.
 
-Pseudo kód:
+Pszeudo kód:
 ```
 számlálók = [0, 0, ..., 0]                   -- kulcsok száma+1 db
 for r in részecskék:
@@ -124,13 +121,13 @@ for r in részecskék:
 
 for részecske in részecskék:
   for cella in részecske cellájának környezete:
-    for másik in cella részecskéi:
-      ha távolság(részecske, másik) <= sugár:
-        a másik részecskéhez tartozó paraméterváltozás kiszámítása
+    for szomszéd in cella részecskéi:
+      ha távolság(részecske, szomszéd) <= smoothing_radius:
+        a szomszéd paraméterváltozásainak kiszámítása
         részecske paraméterének frissítése
 ```
 
-Ezzel az algoritmussal már #todo[\~25000] részecske szimulálható.
+Ezzel az algoritmussal már #todo[\~25000] részecske is szimulálható volt érdemi gyorsasággal.
 
 Sajnos mivel a hash függvény nem tökéletes, van amikor különböző celláknak azonos kulcsa van (akkor is ha a kulcsok száma sokkal több, mint a cellák száma), így nem csak a szomszédos cellák részecskéit vizsgáljuk meg, hanem néhány extrát is.
 

@@ -34,5 +34,9 @@
   // Main body.
   set par(justify: true)
 
+  set enum(
+    indent: 15pt
+  )
+
   body
 }
