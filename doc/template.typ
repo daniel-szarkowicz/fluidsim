@@ -34,7 +34,13 @@
   // Main body.
   set par(justify: true)
 
+  set math.equation(block: true)
+
   set enum(
+    indent: 15pt
+  )
+
+  set list(
     indent: 15pt
   )
 

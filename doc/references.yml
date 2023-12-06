@@ -21,3 +21,9 @@ hash:
   title: Prospecting for Hash Functions
   author: ["Chris Wellons"]
   url: "https://nullprogram.com/blog/2018/07/31/"
+
+pvfs:
+  type: report
+  title: Particle-based Viscoelastic Fluid Simulation
+  author: [Simon Clavet, Philippe Beaudoin, Pierre Poulin]
+  url: http://www.ligum.umontreal.ca/Clavet-2005-PVFS/pvfs.pdf

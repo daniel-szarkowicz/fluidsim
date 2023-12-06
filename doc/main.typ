@@ -12,6 +12,52 @@
 #let todo(content) = text(red, content)
 
 = Bevezetés
+Ez a dokutmentum a folyadék szimulálásra tett kísérletünket fogja végigkísérni. A folyadék szimulálást SPH módszer alapján implementáltuk OpenGL-ben, valamint C++-ban.
+
+= Folyadék szimulálás
+A folyadék szimulálás egy összetett, komplex feladat, mely még napjainkban sem tökéletes. Több különböző algoritmus létezik a folyadékok és gázok szimulálására, hiszen mindkettőnek fontos szerepe van, mind labori tesztelésekben, mind pedig a számítógépes grafika területén, mint például filmekben, számítógépes animációkban.
+
+A szimulálásra két főbb kategória alakult ki:
+- Euler féle hálók
+- Lagrang féle részecskék
+Az Euleri megoldások hálókra bontják a tartományt és ezekben a cellákban számolják a folyadék folyamát(sebességét, irányát, adott pontban). Ezekkel a metódusokkal könnyen lehet egy folyadéknak az összenyomhatatlansági attribútumát biztosítani, azonban a folyadék tömegmegmaradása nem mindig biztosított. 
+
+Ezzel szemben a Lagrang féle metódusok a folyadék tömegét bontják fel részecskékre. Mivel nem a tartományt osztottuk fel, hanem a folyadékot, és ennek a részeit követjük az idő függvényében, így a tömegmegmaradás biztosított, azonban az összenyomhatatlansági attribútum nem garantált.
+Egy másik hátránya a részecske megoldásnak, hogy a vizualizációja a folyadék felszínének nem triviális, hiszen a részecskékkel aktívan elkerüljük a felszín szimulálását, így azt pontosan kiszámítani számításigényes feladat.
+
+== SPH
+A témalabor folyamán a lagrange részecskéken alapuló SPH metódust választottuk. Az SPH, Smoothed Particle Hydrodynamics, 1977-ben kifejlesztett algoritmus, melyet eleinte asztrofizikai problémákra hoztak létre. 
+
+A metódus fő előnyei, hogy külön számításigény nélkül biztosított a tömegmegmaradás, valamint a nyomást egyes helyeken a szomszéd részecskékből számítja, nem pedig lineáris egyenletek megoldásával, így adódik az is, hogy disztinktív réteg fog kialakulni két elem között, ahol a részecskék reprezentálják a sűrűbb folyadékot(vizet), a hígabb folyadékot pedig az űr(ami a levegő).
+
+=== Kernel függvény
+Az SPH fő eleme a folyadék diszkretizálása úgynevezett kernel függvények segítségével. A valós életeben mintavételezni a dirac-$delta$ függvény segítségével szoktak. A dirac-$delta$ függvényt a következő képpen fogjuk definiálni:
+
+#math.equation($delta(r) = cases(infinity "ha" r = 0,
+0 "különben")$)
+#pagebreak()
+,valamint igaz az is, hogy 
+
+#math.equation($display(integral delta(r) italic(d)v = 1)$)
+Miután definiáltuk a dirac-$delta$-t már csak azokat a függvényeket kell megkonstruálni, amikkel ezt közelíteni fogjuk, hiszen a folytonos dirac-$delta$-t nem lehet diszkrét függvénnyé alakítani. Ezeket a függvényeket fogjuk Kernel függvénynek hívni és W-vel fogjuk jelölni. 
+Fontos attribútuma a Kernel függvényeknek, hogy 
+#math.equation($display(W(r, h) = 0 ", ha" ||r|| >= h)" ."$)
+Tehát, ha a két mintavételezett pont közötti távolság nagyobb, vagy egyenlő, mint a smoothing length, akkor mindig 0-át ad vissza a Kernel függvény.
+Definiáljunk még egy A függvényt. Ekkor a dirac-$delta$ tulajdonságaiból következik, hogy ha egy függvényt konvolválunk a dirac-$delta$-val, akkor magát A-t kapjuk. Ezt közelítve a W-vel, a következő függvényt kapjuk:
+#set math.equation(numbering: "(1)")
+#math.equation($A(x) approx (A convolve W)(x) = integral A(x')W(x-x', h)italic(d)v'$,) <a_appr_w>
+, ahol $bold(h)$ a Kernel függvény simító hossza(smoothing length), ami azt adja meg, hogy az A értékét x helyen mennyire befolyásolják a közelben lévő értékek. Mivel azonban számítógépekkel nem tudunk folytonos időben dolgozni, ezért diszkretizálni kell az #emph[@a_appr_w] -et. Ezt úgy érhetjük el, hogy az integrált felcseréljük szummázásra. Az így kapott egyenlet pedig:
+#math.equation(numbering: none)[$A(x_i) = (A convolve W)(x_i)=sum_(j in F) (A_j m_j/rho_j W(x_i - x_j, h))$]
+, ahol F olyan halmaz, amelyben az összes elem az ahhoz az indexhez tartozó A értéket tárolja, i.e.: $A_j = A(x_j)$.
+
+==== Kernel függvény grádiense
+Fontos még egy függvényt definiálni. Ez a kernel függvény grádiense, amit $nabla A$-val jelölünk.
+#math.equation($nabla A_i approx sum_j (A_j  m_j / rho_j  nabla W_("ij"))$) <a_der_appr_w>
+, ahol $W_"ij" "analóg" W(x_i - x_j, h)$-val.  Az #emph[@a_der_appr_w]-ben található Kernel függvény grádiense pedig, az $x_i - x_j$ szerinti deriváltja, mert a smoothing length-et konstansnak tekintjük a szimuláció teljes lefutása során.
+
+
+
+
 #todo[Rövid szöveg a folyadék szimulációról.]
 
 #todo[Motiváció]
