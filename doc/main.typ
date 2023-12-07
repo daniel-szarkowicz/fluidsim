@@ -10,6 +10,7 @@
 )
 
 #let todo(content) = text(red, content)
+#let numbered(content) = math.equation(numbering: "(1)", content)
 
 = Bevezetés
 Ez a dokutmentum a folyadék szimulálásra tett kísérletünket fogja végigkísérni. A folyadék szimulálást SPH módszer alapján implementáltuk OpenGL-ben, valamint C++-ban.
@@ -33,27 +34,39 @@ A metódus fő előnyei, hogy külön számításigény nélkül biztosított a 
 === Kernel függvény
 Az SPH fő eleme a folyadék diszkretizálása úgynevezett kernel függvények segítségével. A valós életeben mintavételezni a dirac-$delta$ függvény segítségével szoktak. A dirac-$delta$ függvényt a következő képpen fogjuk definiálni:
 
-#math.equation($delta(r) = cases(infinity "ha" r = 0,
-0 "különben")$)
-#pagebreak()
+$
+  delta(r) = cases(
+    infinity quad &"ha" r = 0,
+    0        quad &"különben"
+  )
+$
 ,valamint igaz az is, hogy 
 
-#math.equation($display(integral delta(r) italic(d)v = 1)$)
+$
+  integral delta(r) italic(d)v = 1
+$
 Miután definiáltuk a dirac-$delta$-t már csak azokat a függvényeket kell megkonstruálni, amikkel ezt közelíteni fogjuk, hiszen a folytonos dirac-$delta$-t nem lehet diszkrét függvénnyé alakítani. Ezeket a függvényeket fogjuk Kernel függvénynek hívni és W-vel fogjuk jelölni. 
 Fontos attribútuma a Kernel függvényeknek, hogy 
-#math.equation($display(W(r, h) = 0 ", ha" ||r|| >= h)" ."$)
+$
+  W(r, h) = 0 ", ha" ||r|| >= h ". "
+$
 Tehát, ha a két mintavételezett pont közötti távolság nagyobb, vagy egyenlő, mint a smoothing length, akkor mindig 0-át ad vissza a Kernel függvény.
 Definiáljunk még egy A függvényt. Ekkor a dirac-$delta$ tulajdonságaiból következik, hogy ha egy függvényt konvolválunk a dirac-$delta$-val, akkor magát A-t kapjuk. Ezt közelítve a W-vel, a következő függvényt kapjuk:
-#set math.equation(numbering: "(1)")
-#math.equation($A(x) approx (A convolve W)(x) = integral A(x')W(x-x', h)italic(d)v'$,) <a_appr_w>
-, ahol $bold(h)$ a Kernel függvény simító hossza(smoothing length), ami azt adja meg, hogy az A értékét x helyen mennyire befolyásolják a közelben lévő értékek. Mivel azonban számítógépekkel nem tudunk folytonos időben dolgozni, ezért diszkretizálni kell az #emph[@a_appr_w] -et. Ezt úgy érhetjük el, hogy az integrált felcseréljük szummázásra. Az így kapott egyenlet pedig:
-#math.equation(numbering: none)[$A(x_i) = (A convolve W)(x_i)=sum_(j in F) (A_j m_j/rho_j W(x_i - x_j, h))$]
+#numbered[$
+  A(x) approx (A convolve W)(x) = integral A(x')W(x-x', h)italic(d)v'
+$] <a_appr_w>
+, ahol $bold(h)$ a Kernel függvény simító hossza(smoothing length), ami azt adja meg, hogy az A értékét x helyen mennyire befolyásolják a közelben lévő értékek. Mivel azonban számítógépekkel nem tudunk folytonos időben dolgozni, ezért diszkretizálni kell az #emph[@a_appr_w]-et. Ezt úgy érhetjük el, hogy az integrált felcseréljük szummázásra. Az így kapott egyenlet pedig:
+$
+  A(x_i) = (A convolve W)(x_i)=sum_(j in F) (A_j m_j/rho_j W(x_i - x_j, h))
+$
 , ahol F olyan halmaz, amelyben az összes elem az ahhoz az indexhez tartozó A értéket tárolja, i.e.: $A_j = A(x_j)$.
 
 ==== Kernel függvény grádiense
 Fontos még egy függvényt definiálni. Ez a kernel függvény grádiense, amit $nabla A$-val jelölünk.
-#math.equation($nabla A_i approx sum_j (A_j  m_j / rho_j  nabla W_("ij"))$) <a_der_appr_w>
-, ahol $W_"ij" "analóg" W(x_i - x_j, h)$-val.  Az #emph[@a_der_appr_w]-ben található Kernel függvény grádiense pedig, az $x_i - x_j$ szerinti deriváltja, mert a smoothing length-et konstansnak tekintjük a szimuláció teljes lefutása során.
+#numbered[$
+  nabla A_i approx sum_j (A_j  m_j / rho_j  nabla W_(i j))
+$] <a_der_appr_w>
+, ahol $W_(i j) "analóg" W(x_i - x_j, h)$-val.  Az #emph[@a_der_appr_w]-ben található Kernel függvény grádiense pedig, az $x_i - x_j$ szerinti deriváltja, mert a smoothing length-et konstansnak tekintjük a szimuláció teljes lefutása során.
 
 
 
@@ -144,8 +157,8 @@ Maga az algoritmus a vödrös rendezésnek egy párhuzamos változata, 3 részb�
 + Kulcshoz tartozó indexek kiszámolása (párhuzamos prefix sum@par_algs)
 + Részecskék áthelyezése a megfelelő helyre
 
-#todo[n és k paraméterek megnevezése]
-Ez az algoritmut $O(n+k)$ extra memóriát igényel, de ez nem baj, mert általában
+Ez az algoritmus $O(n+k)$ extra memóriát igényel, ahol $n$ a részecskék száma
+és $k$ a kulcsok száma. Az extra memóriahasználat nem probléma, mert általában
 $n >> k$ és a szimuláció eddig is 2 tömböt használt a részecskékhez, szóval
 csak a kulcsoknak kell új memóriát foglalni.
 
@@ -197,7 +210,7 @@ szimulálni.
 === További optimalizációs módszerek
 
 A szimuláció még az előző optimalizálások ellenére is túl sok felesleges
-részecskét vizsgál meg. Tökéletes eloszlás esetén 2 dimenzióban $~65%$-ban, 3
+részecskét vizsgál meg. Egyenletes eloszlás esetén 2 dimenzióban $~65%$-ban, 3
 dimenzióban $~84%$-ban felesleges a vizsgálat. Ezeket az arányokat a cellák
 méretének csökkentésével és a részecske sugarán kívül eső cellák ignorálásával
 lehetne javítani.
@@ -218,6 +231,7 @@ Z-curve]), mert így cache barátabb lenne az iterálás.
   További lehetőségek
   + point splatting
   + marching squares/cubes
+  + metaballs
   + ...
 ]
 
