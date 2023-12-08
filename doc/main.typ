@@ -215,25 +215,33 @@ dimenzióban $~84%$-ban felesleges a vizsgálat. Ezeket az arányokat a cellák
 méretének csökkentésével és a részecske sugarán kívül eső cellák ignorálásával
 lehetne javítani.
 
-Ha a cellák (kulcsok) száma több nagyságrenddel nagyobb lenne, mint a részecskék száma, akkor a vödrös rendezés helyett a #todo[Bitonic sort]-ot érdemes kipróbálni, mert annak a futásideje a részecskék számától függ, nem a cellákétól.
+Ha a cellák (kulcsok) száma több nagyságrenddel nagyobb lenne, mint a
+részecskék száma, akkor a vödrös rendezés helyett a
+Bitonic sort-ot#footnote[https://en.wikipedia.org/wiki/Bitonic_sorter]
+érdemes kipróbálni, mert annak a futásideje a részecskék számától függ, nem a
+cellákétól.
 
 Ha a részecskék és a cellák száma tovább növekedne, akkor a cellákat érdemes
-lehet egy jobb lokalitású sorrendben rendezni (pl. #todo[Hilbert curve,
-Z-curve]), mert így cache barátabb lenne az iterálás.
-
-#todo[további ötletek...]
+lehet egy jobb lokalitású sorrendben rendezni (pl. 
+Hilbert curve#footnote[https://en.wikipedia.org/wiki/Hilbert_curve],
+Z-order curve#footnote[https://en.wikipedia.org/wiki/Z-order_curve]),
+mert így cache barátabb lenne az iterálás.
 
 == Vizualizáció
 
-#todo[semmi extra, csak a részecskék különböző paramétereit vizualizálják]
+A részecskék jelenleg egyszerű billboardokkal vannak megjelenítve. A GUI-ban
+lehet állítani, hogy mi szerint legyenek kiszínezve a részecskék.
 
-#todo[
-  További lehetőségek
-  + point splatting
-  + marching squares/cubes
-  + metaballs
-  + ...
-]
+A folyadék vizualizációjához többféle módszert lehet a jövőben kipróbálni. Egy
+#todo[elterjedt megoldás] a folyadékot #todo[metaballs]-al implicit felületté
+alakítani, majd ezt a felületet #todo[marching cubes]-al vagy sugárkövetéssel
+megjeleníteni.
+
+Egy modernebb megoldás lehet Gaussian splatting
+#footnote[https://en.wikipedia.org/wiki/Gaussian_splatting]-et használni
+Neural radiance field
+#footnote[https://en.wikipedia.org/wiki/Neural_radiance_field]-ekkel, de ez
+nagy valószínűseggel túl mutat a BSc-n.
 
 
 = Eredmények
