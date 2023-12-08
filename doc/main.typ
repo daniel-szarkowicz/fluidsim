@@ -166,7 +166,7 @@ száma ezeknek a többszöröse lenne._
 === Optimalizáció nélkül GPU-n
 
 A program első verziója nem tartalmazott optimalizációt, ezért a GPU sok felesleges
-számítást végzett. Ennek ellenére így is #todo[\~5000] részecskét lehetett
+számítást végzett. Ennek ellenére így is $~5000$ részecskét lehetett
 szimulálni valós időben, ami jó kiindulási pont volt.
 
 Pszeudo kód:
@@ -177,12 +177,15 @@ for részecske_1 in részecskék:
     részecske_1 paramétereinek frissítése
 ```
 
-#todo[kép]
+#figure(
+  image("imgs/no_opti.png", width: 80%),
+  caption: [5240 részecske szimulálása 58 fps-en.]
+)
 
 Ezen a kódon elég könnyű gyorsítani, ha kihasználjuk azt, hogy a smoothing
 kernel a sugarán kívül mindig 0-val tér vissza, azaz a smoothing radius-nél (sugárnál) távolabb levő részecskék nem
 befolyásolhatják egy adott részecskének a paramétereit. Ezzel az egyszerű
-javítással már #todo[\~9000] részecskét is tudtunk értelmes gyorsaság mellett szimulálni.
+javítással már $~7500$ részecskét is tudtunk értelmes gyorsaság mellett szimulálni.
 
 Pszeudo kód:
 ```
@@ -193,7 +196,10 @@ for részecske_1 in részecskék:
       részecske_1 paramétereinek frissítése
 ```
 
-#todo[kép]
+#figure(
+  image("imgs/radius_check.png", width: 80%),
+  caption: [7522 részecske 60 fps-en.]
+)
 
 === Cellákra bontás, hash tábla
 
@@ -208,7 +214,7 @@ Ezzel a megoldással az volt a kihívás, hogy egy cellában a részecskék szá
 
 #figure(
   caption: [
-    Az adatstruktúra. A felső sorban a kulcsokhoz tartozó indexek, az alsóban sorban a részecskék kulcs szerint rendezett tömbje látható.
+    Az adatstruktúra. A felső sorban a kulcsokhoz tartozó indexek, az alsóban sorban a részecskék kulcs szerint rendezett tömbje látható. Az indexek tömbjében az egyszerűség kedvéért van egy extra elem, ami a részecskék tömbje után mutat.
   ],
 )[
   #cetz.canvas({
@@ -270,11 +276,17 @@ for részecske in részecskék:
         részecske paraméterének frissítése
 ```
 
-Ezzel az algoritmussal már #todo[\~25000] részecske is szimulálható volt érdemi gyorsasággal.
+Ezzel az algoritmussal már $~55000$ részecske is szimulálható volt érdemi gyorsasággal.
 
 Sajnos mivel a hash függvény nem tökéletes, van amikor különböző celláknak azonos kulcsa van (akkor is ha a kulcsok száma sokkal több, mint a cellák száma), így nem csak a szomszédos cellák részecskéit vizsgáljuk meg, hanem néhány extrát is.
 
-#todo[kép, amin sok kulccsal is van ütközés]
+#figure(
+  image("imgs/cell_collision.png", width: 80%),
+  caption: [
+    54957 részecske 42860 kulccsal 60 fps-en. A 2 egyedülálló piros cella
+    kulcsa ütközik az egyik ellenőrzött cella kulcsával, nagy kulcsszám ellenére is.
+  ]
+)
 
 === Szimulációs határok kihasználása
 
@@ -286,10 +298,15 @@ Eddig határon levő cellák vizsgálatakor a határon kívüli szomszédokat is
 megvizsgáltuk, sőt mivel a szimuláció 3 dimenzióra lett megírva, 2 dimenzióban
 18 cellát mindig feleslegesen vizsgáltunk.
 
-Ezzel a kettő változtatással már #todo[\~50000] részecskét lehet valós időben
+Ezzel a kettő változtatással már $~80000$ részecskét lehet valós időben
 szimulálni.
 
-#todo[kép, amin kevés kulccsal sincs ütközés]
+#figure(
+  image("imgs/cell_no_collision.png", width: 80%),
+  caption: [
+    79131 részecske 5757 kulccsal 56 fps-en. Látható, hogy az alacsony kulcsszám ellenére sincs ütközés.
+  ]
+)
 
 === További optimalizációs módszerek
 
