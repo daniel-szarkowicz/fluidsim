@@ -14,7 +14,7 @@
 #let numbered(content) = math.equation(numbering: "(1)", content)
 
 = Bevezetés
-Ez a dokutmentum a folyadék szimulálásra tett kísérletünket fogja végigkísérni. A folyadék szimulálást SPH módszer alapján implementáltuk OpenGL-ben, valamint C++-ban.
+Ez a dokumentum a folyadék szimulálásra tett kísérletünket fogja végigkísérni. A folyadék szimulálást SPH módszer alapján implementáltuk OpenGL-ben, valamint C++-ban.
 
 = Folyadék szimulálás
 A folyadék szimulálás egy összetett, komplex feladat, mely még napjainkban sem tökéletes. Több különböző algoritmus létezik a folyadékok és gázok szimulálására, hiszen mindkettőnek fontos szerepe van, mind labori tesztelésekben, mind pedig a számítógépes grafika területén, mint például filmekben, számítógépes animációkban.
@@ -28,7 +28,7 @@ Ezzel szemben a Lagrange féle metódusok a folyadék tömegét bontják fel ré
 Egy másik hátránya a részecske megoldásnak, hogy a vizualizációja a folyadék felszínének nem triviális, hiszen a részecskékkel aktívan elkerüljük a felszín szimulálását, így azt pontosan kiszámítani számításigényes feladat.
 
 == SPH
-A témalabor folyamán a lagrange részecskéken alapuló SPH metódust választottuk. Az SPH, Smoothed Particle Hydrodynamics, 1977-ben kifejlesztett algoritmus, melyet eleinte asztrofizikai problémákra hoztak létre. 
+A témalabor folyamán a Lagrange részecskéken alapuló SPH metódust választottuk. Az SPH, Smoothed Particle Hydrodynamics, 1977-ben kifejlesztett algoritmus, melyet eleinte asztrofizikai problémákra hoztak létre. 
 
 A metódus fő előnyei, hogy külön számításigény nélkül biztosított a tömegmegmaradás, valamint a nyomást egyes helyeken a szomszéd részecskékből számítja, nem pedig lineáris egyenletek megoldásával, így adódik az is, hogy disztinktív réteg fog kialakulni két elem között, ahol a részecskék reprezentálják a sűrűbb folyadékot(vizet), a hígabb folyadékot pedig az űr(ami a levegő).
 
@@ -63,10 +63,10 @@ $
 $
 , ahol F olyan halmaz, amelyben az összes elem az ahhoz az indexhez tartozó A értéket tárolja, i.e.: $A_j = A(x_j)$.
 
-==== Kernel függvény grádiense
-Fontos még egy függvényt definiálni. Ez a pótfüggvény grádiense, amit $nabla A$-val jelölünk.
+==== Kernel függvény gradiense
+Fontos még egy függvényt definiálni. Ez a pótfüggvény gradiense, amit $nabla A$-val jelölünk.
 #math.equation($nabla A_i approx sum_j (A_j  m_j / rho_j  nabla W_("ij"))$) <a_der_appr_w>
-, ahol $W_"ij" "analóg" W(x_i - x_j, h)$-val.  Az #emph[@a_der_appr_w]-ban található Kernel függvény grádiense pedig, az $x_i - x_j$ szerinti deriváltja, mert a smoothing length-et konstansnak tekintjük a szimuláció teljes lefutása során. 
+, ahol $W_"ij" "analóg" W(x_i - x_j, h)$-val.  Az #emph[@a_der_appr_w]-ban található Kernel függvény gradiense pedig, az $x_i - x_j$ szerinti deriváltja, mert a smoothing length-et konstansnak tekintjük a szimuláció teljes lefutása során. 
 
 ==== Kernel választás
 Kernel választásnál, amíg a szempontokat szem előtt tartjuk, addig nagyon sok féle lehetőségünk van. A papír@sph_tutorial szerint egy szokványos választás a köbös görbe.
@@ -89,7 +89,7 @@ számítását, mert a deriváltja $0$ közelében nem $0$-hoz tart@coding_adven
 === SPH algoritmus menete
 Maga az algoritmus menete könnyen diszkretizálható disztinkt állomásokra. Először is végig kell mennünk minden részecskén minden iterációban, kiszámolni rá a kívánt attribútumokat a szomszédos részecskék segítségével. Ha ezzel végeztünk, akkor még egy ciklusban frissítjük a részecskék pozícióját, valamint a határokkal való esetleges ütközéseket lekezeljük.
 
-Pszeudó kód:
+Pszeudokód:
 ```
 for részecske_1 in részecskék:
   for részecske_2 in részecskék:
@@ -108,7 +108,7 @@ A kívánt attribútumok pedig a következők:
 - közeli sűrűség
 - viszkozitás
 - nyomás
-Ezeken kívűl más attribútumokat is ki lehet még számítani, hogy még pontosabb legyen a szimuláció, azonban mi csak ezeket számoltuk ki.
+Ezeken kívül más attribútumokat is ki lehet még számítani, hogy még pontosabb legyen a szimuláció, azonban mi csak ezeket számoltuk ki.
 
 ==== Attribútumok kiszámítása
 ===== Sűrűség kiszámítása
@@ -136,7 +136,7 @@ Ezekkel a konstansokkal már definiálhatjuk a konverziót a sűrűség és a ny
 Azonban ha csak ennyi attribútumot számolnánk ki, akkor sok felhalmozódás lenne, részecskék egymásra lapolódnának. Ennek elkerülésére számoljuk ki a közelségi sűrűséget. Ezt hasonló módon számoljuk, mint a sűrűséget, annyi különbséggel, hogy egy újabb konstanst és attribútumot bevezetünk:
 + közeli rugalmassági konstans $k^"near"$, valamint
 + közelségi sűrűség $rho^"near"$.
-A közelségi sűrűgséget az alábbi módon:
+A közelségi sűrűséget az alábbi módon:
 #math.equation($rho_i^"near" = sum_(j in N(i))W_"near_ij"$)
 , ahol N az i. részecske szomszédait tárolja, valamint $W_"near_ij"$ egy eltérő kernel függvény a sűrűségnél használt kernel függvénytől, olyan módon, hogy meredekebb a meredeksége, amint 0-át közelítjük. A közeli nyomást pedig:
 #math.equation($P_i^"near" = k^"near" rho_i^"near"$) <near_density_eq>
@@ -144,7 +144,7 @@ A közelségi sűrűgséget az alábbi módon:
 ===== Felületi feszültség
 Fontos eleme a folyadékoknak a felületi feszültségük. Ez azért lényeges, mert enélkül a szimulált folyadék lényegesen darabosabb lesz. Ezt több attribútum együttesével lehetne elérni, azonban mi, csak a viszkozitással foglalkoztunk. Ezt az alábbi módon számoltuk:
 
-Pszeudó kód:
+Pszeudokód:
 ```
 for részecske_1 in részecskék:
   viszkozitás_impulzus := null_vec(d)
@@ -163,7 +163,7 @@ for részecske_1 in részecskék:
 Miután meghatároztuk a részecskék attribútumait, már csak egy lépés van hátra, hogy mozgassuk is őket. Ehhez először ki kell számolni a rájuk ható eredő erőt.
 Az eredő erő kiszámítását a következő képpen tettük mi meg:
 
-Pszeudó kód:
+Pszeudokód:
 ```
 for részecske in részecskék:
   eredő_erő := null_vec(d)
@@ -181,12 +181,12 @@ Ennek a ciklusnak a végeztével minden elemünk megvan, hogy végre mozgassuk a
 ==== A részecskék pozícióinak módosítása
 Ez a lépés igazán triviális. Annyi a lényege, hogy végig iterálunk a részecskéken és mindnek először a sebességét módosítjuk, majd a pozíciójukat az eltelt idő függvényében.
 
-Pszeudó kód:
+Pszeudokód:
 ```
 for részecske in részecskék:
   részecske.sebesség += gravitáció * eltelt_idő
   részecske.pozíció += részecske.sebesség * eltelt_idő
-  if szimulációs téren kivül a részecske.pozíció: visszahelyezés a szimulációs térbe
+  if szimulációs téren kívül a részecske.pozíció: visszahelyezés a szimulációs térbe
 ```
 
 Fontos megjegyezni, hogy stabilitás szempontjából, az attribútumok számításánál érdemes a jósolt pozíciókkal számolni. Ez azt jelenti, hogy, i.e. a szomszédok megkeresésénél, azt a pozíciót vesszük, amit úgy kapunk, hogy a részecske jelenlegi sebességét eltelt idővel szorozva hozzáadjuk a pozícióhoz. Ezt nevezzük jósolt pozíciónak. Ezzel az értékkel csak az attribútumok számolásánál dolgozunk, amikor az utolsó ciklusban a részecskéket mozgatjuk, akkor az eredeti pozícióhoz adjuk hozzá az elmozdulást, nem pedig a jósolthoz. Ez a metódus nagy különbséget jelent, mivel enélkül, nem csillapodnak le, vagy nagyon nehezen a részecskék.
@@ -213,7 +213,7 @@ A program első verziója nem tartalmazott optimalizációt, ezért a GPU sok fe
 számítást végzett. Ennek ellenére így is $~5000$ részecskét lehetett
 szimulálni valós időben, ami jó kiindulási pont volt.
 
-Pszeudo kód:
+Pszeudokód:
 ```
 for részecske_1 in részecskék:
   for részecske_2 in részecskék:
@@ -231,7 +231,7 @@ kernel a sugarán kívül mindig 0-val tér vissza, azaz a smoothing radius-nél
 befolyásolhatják egy adott részecskének a paramétereit. Ezzel az egyszerű
 javítással már $~7500$ részecskét is tudtunk értelmes gyorsaság mellett szimulálni.
 
-Pszeudo kód:
+Pszeudokód:
 ```
 for részecske_1 in részecskék:
   for részecske_2 in részecskék:
@@ -287,7 +287,7 @@ Ezzel a megoldással az volt a kihívás, hogy egy cellában a részecskék szá
 ]
 
 Maga az algoritmus a vödrös rendezésnek egy párhuzamos változata, 3 részből áll:
-+ A kulcshoz tartozó részecskék megszámolása és a részecsék kulcson belüli indexének kiszámítása (párhuzamosan, atomi számlálókkal)
++ A kulcshoz tartozó részecskék megszámolása és a részecskék kulcson belüli indexének kiszámítása (párhuzamosan, atomi számlálókkal)
 + Kulcshoz tartozó indexek kiszámolása (párhuzamos prefix sum@par_algs)
 + Részecskék áthelyezése a megfelelő helyre
 
@@ -298,7 +298,7 @@ csak a kulcsoknak kell új memóriát foglalni.
 
 Ezután minden részecskéhez már csak a környező cellák részecskéit kell megvizsgálni.
 
-Pszeudo kód:
+Pszeudokód:
 ```
 számlálók = [0, 0, ..., 0]                   -- kulcsok száma+1 db
 for r in részecskék:
@@ -389,7 +389,7 @@ Egy modernebb megoldás lehet Gaussian splatting
 #footnote[https://en.wikipedia.org/wiki/Gaussian_splatting]-et használni
 Neural radiance field
 #footnote[https://en.wikipedia.org/wiki/Neural_radiance_field]-ekkel, de ez
-nagy valószínűseggel túl mutat a BSc-n.
+nagy valószínűséggel túl mutat a BSc-n.
 
 
 = Eredmények
