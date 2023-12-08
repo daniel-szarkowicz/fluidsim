@@ -157,7 +157,7 @@ for részecske_1 in részecskék:
 
   részecske_1.sebesség += viszkozitás_impulzus * eltelt_idő
 ```
-, ahol `null_vec(d)` olyan sorvektor, ami d db nullát tartalmaz, valamint coeff a koefficiense az u-nak, azaz, azt adjuk meg, hogy mennyire akarjuk folyékonyra, vagy sűrűre a folyadékunk. Nagyobb coeff tartósabb, viszkózusabb folyadékot eredményez.
+, ahol `null_vec(d)` olyan sorvektor, ami `d` db nullát tartalmaz, valamint `coeff` a koefficiense az `u`-nak, azaz, azt adjuk meg, hogy mennyire akarjuk folyékonyra, vagy sűrűre a folyadékunk. Nagyobb `coeff` tartósabb, viszkózusabb folyadékot eredményez.
 
 ==== Erő meghatározása
 Miután meghatároztuk a részecskék attribútumait, már csak egy lépés van hátra, hogy mozgassuk is őket. Ehhez először ki kell számolni a rájuk ható eredő erőt.
