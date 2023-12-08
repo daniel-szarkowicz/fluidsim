@@ -106,7 +106,7 @@ Az i. részecske sűrűség attribútumának kiszámítása az alábbi, egyszer�
 
 Ennek a megoldásnak egy hátránya, hogy a felületeknél alulbecsli egy részecske sűrűségét, abból az egyszerű okból kifolyólag, hogy kevesebb szomszédja van, amiatt, mert a levegőben, nincsenek részecskék.
 #figure(
-  image("imgs/neighbours.png"),
+  image("imgs/neighbours.png", width: 80%),
   caption: [
     Látható, hogy pirosnak jóval kevesebb részecske fog hozzájárulni a sűrűségéhez, mint a zöldnek.
   ] 
