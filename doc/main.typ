@@ -52,7 +52,8 @@ $
 $
 Tehát, ha a két mintavételezett pont közötti távolság nagyobb, vagy egyenlő, mint a smoothing length, akkor mindig 0-át ad vissza a Kernel függvény.
 Definiáljunk még egy A függvényt. Ekkor a dirac-$delta$ tulajdonságaiból következik, hogy ha egy függvényt konvolválunk a dirac-$delta$-val, akkor magát A-t kapjuk. Ezt közelítve a W-vel, a következő függvényt kapjuk:
-#numbered[$
+#set math.equation(numbering: "(1)")
+#math.equation[$
   A(x) approx (A convolve W)(x) = integral A(x')W(x-x', h)italic(d)v'
 $] <a_appr_w>
 , ahol $bold(h)$ a Kernel függvény simító hossza(smoothing length), ami azt adja meg, hogy az A értékét x helyen mennyire befolyásolják a közelben lévő értékek. Mivel azonban számítógépekkel nem tudunk folytonos időben dolgozni, ezért diszkretizálni kell az #emph[@a_appr_w]-et. Ezt úgy érhetjük el, hogy az integrált felcseréljük szummázásra. Az így kapott egyenlet pedig:
@@ -62,20 +63,74 @@ $
 , ahol F olyan halmaz, amelyben az összes elem az ahhoz az indexhez tartozó A értéket tárolja, i.e.: $A_j = A(x_j)$.
 
 ==== Kernel függvény grádiense
-Fontos még egy függvényt definiálni. Ez a kernel függvény grádiense, amit $nabla A$-val jelölünk.
-#numbered[$
-  nabla A_i approx sum_j (A_j  m_j / rho_j  nabla W_(i j))
-$] <a_der_appr_w>
-, ahol $W_(i j) "analóg" W(x_i - x_j, h)$-val.  Az #emph[@a_der_appr_w]-ben található Kernel függvény grádiense pedig, az $x_i - x_j$ szerinti deriváltja, mert a smoothing length-et konstansnak tekintjük a szimuláció teljes lefutása során.
+Fontos még egy függvényt definiálni. Ez a pótfüggvény grádiense, amit $nabla A$-val jelölünk.
+#math.equation($nabla A_i approx sum_j (A_j  m_j / rho_j  nabla W_("ij"))$) <a_der_appr_w>
+, ahol $W_"ij" "analóg" W(x_i - x_j, h)$-val.  Az #emph[@a_der_appr_w]-ben található Kernel függvény grádiense pedig, az $x_i - x_j$ szerinti deriváltja, mert a smoothing length-et konstansnak tekintjük a szimuláció teljes lefutása során. 
 
+==== Kernel választás
+Kernel választásnál, amíg a szempontokat szem előtt tartjuk, addig nagyon sok féle lehetőségünk van. A papír@sph_tutorial szerint egy szokványos választás a köbös görbe.
+Ezt a görbét a következő képpen fogjuk definiálni:#pagebreak()
+#math.equation($W(bold(r), h) = sigma_d cases(6(q^3 - q^2)+1 ", ha " 0 <= q <= 1/2, 2(1-q)^3 ", ha " 1/2 < q <= 1, 0 ", különben")$)
+, ahol $q = 1/h||bold(r)||$, valamint d= 1,2,3 esetén $sigma_1 = 3/(4h) "," sigma_2 = 40/(7pi h^2) " and " sigma_3 = 8/(pi h ^3)$. @sph_tutorial 
 
+=== SPH algoritmus menete
+Maga az algoritmus menete könnyen diszkretizálható disztinkt állomásokra. Először is végig kell mennünk minden részecskén minden iterációban, kiszámolni rá a kívánt attribútumokat a szomszédos részecskék segítségével. Ha ezzel végeztünk, akkor még egy ciklusban frissítjük a részecskék pozícióját, valamint a határokkal való esetleges ütközéseket lekezeljük.
 
+Pszeudó kód:
+```
+for részecske_1 in részecskék:
+  for részecske_2 in részecskéh:
+    számold ki a kívánt attribútumait részecske_1-nek részecske_2 függvényében
 
-#todo[Rövid szöveg a folyadék szimulációról.]
+for részecske_1 in részecskék:
+  számold ki a részecske_1-re ható erőket az attribútumok által
 
-#todo[Motiváció]
+for részecske_1 in részecskék:
+  számold ki részecske_1 új sebesség vektorát eltelt idő függvényében
+  számold ki részecske_1 új pozícióját
+  nézd meg, hogy nem megy-e ki a szimulációs térből a részecske
+```
+A kívánt attribútumok pedig a következők: 
+- sűrűség
+- közeli sűrűség
+- viszkozitás
+- nyomás
+Ezeken kívűl más attribútumokat is ki lehet még számítani, hogy még pontosabb legyen a szimuláció, azonban mi csak ezeket számoltuk ki.
 
-#todo[Szakirodalmi áttekintés @coding_adventures @sph_tutorial]
+==== Attribútumok kiszámítása
+===== Sűrűség kiszámítása
+Az i. részecske sűrűség attribútumának kiszámítása az alábbi, egyszerű módon, elvégezhető:
+#math.equation($rho_i = sum_j m_j W_(i j)$)
+, ahol $rho_i$, az i. részecske sűrűsége, $m_j$ a j. részecske tömege, $W_(i j)$ pedig kernel függvény.
+
+Ennek a megoldásnak egy hátránya, hogy a felületeknél alulbecsli egy részecske sűrűségét, abból az egyszerű okból kifolyólag, hogy kevesebb szomszédja van, amiatt, mert a levegőben, nincsenek részecskék.
+#figure(
+  image("imgs/neighbours.png"),
+  caption: [
+    Látható, hogy pirosnak jóval kevesebb részecske fog hozzájárulni a sűrűségéhez, mint a zöldnek.
+  ] 
+)
+
+===== Nyomás sűrűségből  
+Miután meghatároztuk a részecskék sűrűségeit, a következő kérdés az, hogy ezzel, hogyan tudjuk befolyásolni a mozgásukat. Erre ad egy megoldást az a metódus, ha minden részecskére kiszámítjuk a nyomást a sűrűségből. Ehhez két konstanst definiálnunk kell, hogy a konverzió működhessen:
++ nyugalmi sűrűség $rho_0$
++ rugalmassági konstans $k$.
+A nyugalmi sűrűséggel azt határozzuk meg, hogy a folyadékban a részecskéknek, nyugalmi állapotban, milyen sűrűségekkel kellene rendelkezzenek. A másik konstanssal, rugalmassági konstanssal, azt határozzuk meg, hogy mekkora befolyása legyen a sűrűségnek a szimulációra. Minél nagyobb k, annál kevésbé összenyomható a folyadék, azonban finomabb időközönként kell szimulálni, tehát ez egy optimalizációs kérdés.
+
+Ezekkel a konstansokkal már definiálhatjuk a konverziót a sűrűség és a nyomás között:
+#math.equation($P_i = k(rho_i - rho_0)$)
+
+Fontos még, hogy a részecskék ne ragadjanak párokba, mivel enélkül irrealisztikusan  gyakran darabokra esne szét a folyadék, ezért a közelségi sűrűséget is kiszámoljuk. Ezt hasonló módon számoljuk, mint a sűrűséget, annyi különbséggel, hogy egy újabb konstanst és attribútumot bevezetünk:
++ közeli rugalmassági konstans $k^"near"$, valamint
++ közelségi sűrűség $rho^"near"$.
+A közelségi sűrűgséget az alábbi módon:
+#math.equation($rho_i^"near" = sum_(j in N(i))W_"near_ij"$)
+, ahol N az i. részecske szomszédait tárolja, valamint $W_"near_ij"$ egy eltérő kernel függvény a sűrűségnél használt kernel függvénytől, olyan módon, hogy meredekebb a meredeksége. A közeli nyomást pedig:
+#math.equation($P_i^"near" = k^"near" rho_i^"near"$) <near_density_eq>
+, módon kapjuk meg. @near_density_eq -ből azért hiányzik a nyugalmi sűrűség, mivel ezt a nyomást, kizárólag taszító erőként szeretnénk számon venni.
+===== Felületi feszültség
+Fontos eleme a folyadékoknak a felületi feszültségük. Ez azért lényeges, mert enélkül a szimulált folyadék lényegesen darabosabb lesz. Ezt több attribútum együttesével lehetne elérni, azonban mi, csak a viszkozitással foglalkoztunk. Ezt az alábbi módon számoltuk:
+
 
 = Implementáció
 
