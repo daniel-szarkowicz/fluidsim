@@ -133,12 +133,12 @@ A nyugalmi sűrűséggel azt határozzuk meg, hogy a folyadékban a részecskék
 Ezekkel a konstansokkal már definiálhatjuk a konverziót a sűrűség és a nyomás között:
 #math.equation($P_i = k(rho_i - rho_0)$)
 
-Fontos még, hogy a részecskék ne ragadjanak párokba, mivel enélkül irrealisztikusan  gyakran darabokra esne szét a folyadék, ezért a közelségi sűrűséget is kiszámoljuk. Ezt hasonló módon számoljuk, mint a sűrűséget, annyi különbséggel, hogy egy újabb konstanst és attribútumot bevezetünk:
+Azonban ha csak ennyi attribútumot számolnánk ki, akkor sok felhalmozódás lenne, részecskék egymásra lapolódnának. Ennek elkerülésére számoljuk ki a közelségi sűrűséget. Ezt hasonló módon számoljuk, mint a sűrűséget, annyi különbséggel, hogy egy újabb konstanst és attribútumot bevezetünk:
 + közeli rugalmassági konstans $k^"near"$, valamint
 + közelségi sűrűség $rho^"near"$.
 A közelségi sűrűgséget az alábbi módon:
 #math.equation($rho_i^"near" = sum_(j in N(i))W_"near_ij"$)
-, ahol N az i. részecske szomszédait tárolja, valamint $W_"near_ij"$ egy eltérő kernel függvény a sűrűségnél használt kernel függvénytől, olyan módon, hogy meredekebb a meredeksége. A közeli nyomást pedig:
+, ahol N az i. részecske szomszédait tárolja, valamint $W_"near_ij"$ egy eltérő kernel függvény a sűrűségnél használt kernel függvénytől, olyan módon, hogy meredekebb a meredeksége, amint 0-át közelítjük. A közeli nyomást pedig:
 #math.equation($P_i^"near" = k^"near" rho_i^"near"$) <near_density_eq>
 , módon kapjuk meg. @near_density_eq -ből azért hiányzik a nyugalmi sűrűség, mivel ezt a nyomást, kizárólag taszító erőként szeretnénk számon venni.
 ===== Felületi feszültség
@@ -157,7 +157,7 @@ for részecske_1 in részecskék:
 
   részecske_1.sebesség += viszkozitás_impulzus * eltelt_idő
 ```
-, ahol null_vec(d) olyan sorvektor, ami d db nullát tartalmaz, valamint coeff a koefficiense az u-nak, azaz, azt adjuk meg, hogy mennyire akarjuk folyékonyra, vagy sűrűre a folyadékunk. Nagyobb coeff tartósabb, viszkózusabb folyadékot eredményez.
+, ahol `null_vec(d)` olyan sorvektor, ami d db nullát tartalmaz, valamint coeff a koefficiense az u-nak, azaz, azt adjuk meg, hogy mennyire akarjuk folyékonyra, vagy sűrűre a folyadékunk. Nagyobb coeff tartósabb, viszkózusabb folyadékot eredményez.
 
 ==== Erő meghatározása
 Miután meghatároztuk a részecskék attribútumait, már csak egy lépés van hátra, hogy mozgassuk is őket. Ehhez először ki kell számolni a rájuk ható eredő erőt.
@@ -189,11 +189,11 @@ for részecske in részecskék:
   if szimulációs téren kivül a részecske.pozíció: visszahelyezés a szimulációs térbe
 ```
 
-Fontos megjegyezni, hogy stabilitás szempontjából, az attribútumok számításánál érdemes a jósolt pozíciókkal számolni. Ezt azt jelenti, hogy amikor i.e. a szomszédok megkeresésénél azt a pozíciót vesszük, amit úgy kapunk, hogy a részecske jelenlegi sebességét eltelt idővel szorozva hozzáadjuk a pozícióhoz. Ezt nevezzük jósolt pozíciónak. Ezzel az értékkel csak az attribútumok számolásánál dolgozunk, amikor az utolsó ciklusban a részecskéket mozgatjuk, akkor az eredeti pozícióhoz adjuk hozzá az elmozdulást, nem pedig a jósolthoz. Ez a metódus nagy különbséget jelent, mivel enélkül, nem csillapodnak le, vagy nagyon nehezen a részecskék.
+Fontos megjegyezni, hogy stabilitás szempontjából, az attribútumok számításánál érdemes a jósolt pozíciókkal számolni. Ez azt jelenti, hogy, i.e. a szomszédok megkeresésénél, azt a pozíciót vesszük, amit úgy kapunk, hogy a részecske jelenlegi sebességét eltelt idővel szorozva hozzáadjuk a pozícióhoz. Ezt nevezzük jósolt pozíciónak. Ezzel az értékkel csak az attribútumok számolásánál dolgozunk, amikor az utolsó ciklusban a részecskéket mozgatjuk, akkor az eredeti pozícióhoz adjuk hozzá az elmozdulást, nem pedig a jósolthoz. Ez a metódus nagy különbséget jelent, mivel enélkül, nem csillapodnak le, vagy nagyon nehezen a részecskék.
 === Fejlődés  
-Az SPH, amit implementáltunk javítható több helyen is. Egyik nagy lehetőség az az, hogy nem csak viszkozitást, hanem úgymond rugókat, valamint nyúlást is szimulálunk, amik mind segítenék a felületi feszültség akkurátusabb szimulálását. @pvfs
+Az SPH, amit implementáltunk, javítható több helyen is. Egyik nagy lehetőség az az, hogy nem csak viszkozitást, hanem úgymond rugókat, valamint nyúlást is szimulálunk, amik mind segítenék a felületi feszültség akkurátusabb szimulálását. @pvfs
 
-Fontos még azt is megjegyezni, hogy egyszerű szimulációs teret készítettünk csak a programnak, azaz, szilárd testet nem lehetne még beleejteni. Erre egy jó megoldás az úgy nevezett határ mintavételezéssel. Ez a módszer azt takarja, hogy a szilárd test határánál is részecskék vannak egységesen elosztva, több rétegben, amiknek pont akkora lenne a sűrűsége, hogy nem menjen bele a folyadék részecske, azonban, nem akkora, hogy ne tudjon lenyugodni a test. Ennek a módszernek az implementálása egy érdekes kitérés lehet, amellyel már a folyadék szilárd testekkel való interakcióját is tudnánk szimulálni.
+Fontos még azt is megjegyezni, hogy egyszerű szimulációs teret készítettünk csak a programnak, azaz, szilárd testet nem lehetne még beleejteni. Erre egy jó megoldás az úgy nevezett határ generálás mintavételezéssel. Ez a módszer azt takarja, hogy a szilárd test határánál is részecskék vannak egységesen elosztva, több rétegben, amiknek pont akkora lenne a sűrűsége, hogy ne menjen bele a folyadék részecske, azonban, nem akkora, hogy ne tudjon lenyugodni a test. Ennek a módszernek az implementálása egy érdekes kitérés lehet, amellyel már a folyadék szilárd testekkel való interakcióját is tudnánk szimulálni.
 
 Ezeken kívül használhatnánk még más metódust az időléptetésre. Erre léteznek kiforrott, biztonságos algoritmusok, amik nagyobb időintervallumokat is relatíve jól lekezelnek.
 
