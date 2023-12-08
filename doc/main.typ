@@ -1,3 +1,4 @@
+#import "@preview/cetz:0.1.2"
 #import "template.typ": *
 
 #show: project.with(
@@ -205,7 +206,35 @@ Gyakran használt megoldás@sph_tutorial, hogy a szimulált teret cellákra bont
 Az első megoldás egy vödrös hash szerű adatstruktúrát használ.
 Ezzel a megoldással az volt a kihívás, hogy egy cellában a részecskék száma 0-tól a részecskék számáig terjedhet és az OpenGL nem támogat dinamikus memória foglalást. A probléma áthidalására egy megoldást ad az, ha a részecskéket kulcsaik szerint rendezzük, és egy segéd tömbben eltároljuk, hogy az egy kulcshoz tartozó részecskék mettől meddig tartanak. A kulcsokat egy generikus hash függvény@hash segítségével számoljuk ki.
 
-#todo[ábra az adatstruktúráról]
+#figure(
+  caption: [
+    Az adatstruktúra. A felső sorban a kulcsokhoz tartozó indexek, az alsóban sorban a részecskék kulcs szerint rendezett tömbje látható.
+  ],
+)[
+  #cetz.canvas({
+    import cetz.draw: *
+    let particle_count = 150
+    let indicies = (0, 20, 24, 30, 50, 65, 66, 66, 100, 105, 120, particle_count)
+    let element_width = 0.1
+    let particles_width = element_width * particle_count
+    let indicies_width = indicies.len() * 1
+    let particles_offset = (indicies_width - particles_width)/2
+    grid((0, 2), (indicies_width, 3))
+
+    for (i, idx) in indicies.enumerate() {
+      line(
+        (0.5 + i, 2),
+        (particles_offset + 0.05 + element_width*idx, 1),
+        mark: (end: ">")
+      )
+    }
+    grid(
+      (particles_offset, 0),
+      (particles_offset + particles_width, 1),
+      step: (x: element_width, y: 1)
+    )
+  })
+]
 
 Maga az algoritmus a vödrös rendezésnek egy párhuzamos változata, 3 részből áll:
 + A kulcshoz tartozó részecskék megszámolása és a részecsék kulcson belüli indexének kiszámítása (párhuzamosan, atomi számlálókkal)
