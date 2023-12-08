@@ -214,13 +214,13 @@ Ezzel a megoldással az volt a kihívás, hogy egy cellában a részecskék szá
 
 #figure(
   caption: [
-    Az adatstruktúra. A felső sorban a kulcsokhoz tartozó indexek, az alsóban sorban a részecskék kulcs szerint rendezett tömbje látható. Az indexek tömbjében az egyszerűség kedvéért van egy extra elem, ami a részecskék tömbje után mutat.
+    Az adatstruktúra. A felső sorban a kulcsokhoz tartozó indexek, az alsóban sorban a részecskék kulcs szerint rendezett tömbje látható. Az indexek tömbjében az egyszerűség kedvéért van egy extra elem, ami a részecskék tömbje után mutat. Ha egy kulcshoz nem tartozik részecske, akkor a kezdő indexe megegyezik a következő kulcs indexével.
   ],
 )[
   #cetz.canvas({
     import cetz.draw: *
     let particle_count = 150
-    let indicies = (0, 20, 24, 30, 50, 65, 66, 66, 100, 105, 120, particle_count)
+    let indicies = (0, 20, 40, 40, 50, 65, 86, 86, 100, 105, 120, particle_count)
     let element_width = 0.1
     let particles_width = element_width * particle_count
     let indicies_width = indicies.len() * 1
