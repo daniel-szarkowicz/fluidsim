@@ -350,6 +350,24 @@ nagy valószínűseggel túl mutat a BSc-n.
 
 = Eredmények
 
+#figure(
+  caption: [
+    Egy "Dam Break" szimuláció részecskéinek sűrűsége (bal oldal)
+    és sebessége (jobb oldal)
+  ]
+)[
+  #grid(
+    columns: 2,
+    gutter: 1%,
+    image("imgs/simu_density.png", width: 100%),
+    image("imgs/simu_speed.png", width: 100%),
+  )
+]
+
+#figure(
+  image("imgs/two_densities.png", width: 80%),
+  caption: [Két különböző sűrűségű folyadék],
+)
 #todo[gyengén összenyomható folyadék]
 
 #todo[különböző sűrűségű folyadékok (csak úgy működik, de akkor is menő)]
