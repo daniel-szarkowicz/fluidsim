@@ -71,8 +71,20 @@ Fontos még egy függvényt definiálni. Ez a pótfüggvény grádiense, amit $n
 ==== Kernel választás
 Kernel választásnál, amíg a szempontokat szem előtt tartjuk, addig nagyon sok féle lehetőségünk van. A papír@sph_tutorial szerint egy szokványos választás a köbös görbe.
 Ezt a görbét a következő képpen fogjuk definiálni:#pagebreak()
-#math.equation($W(bold(r), h) = sigma_d cases(6(q^3 - q^2)+1 ", ha " 0 <= q <= 1/2, 2(1-q)^3 ", ha " 1/2 < q <= 1, 0 ", különben")$)
-, ahol $q = 1/h||bold(r)||$, valamint d= 1,2,3 esetén $sigma_1 = 3/(4h) "," sigma_2 = 40/(7pi h^2) " and " sigma_3 = 8/(pi h ^3)$. @sph_tutorial 
+#math.equation($W(bold(r), h) = sigma_d cases(6(q^3 - q^2)+1 quad &"ha " 0 <= q <= 1/2, 2(1-q)^3 &"ha " 1/2 < q <= 1, 0 &"különben")$)
+, ahol $q = 1/h||bold(r)||$, valamint d= 1,2,3 esetén $sigma_1 = 3/(4h) "," sigma_2 = 40/(7pi h^2) " és " sigma_3 = 8/(pi h ^3)$. @sph_tutorial 
+
+A csapatunk a
+$
+  W(r, h) = cases(
+    (h-r)^2 / V quad & "ha" 0 <= r <= h,
+    0 quad & "különben"
+  )
+$
+függvényt választotta, ahol $2$ illetve $3$ dimenzió esetén
+$V_2 = (pi dot h^4)/6$ és $V_3 = (2 pi dot h^5)/15$.\
+Ez a függvény jobban kezeli az egymáshoz közeli részecskék nyomásának
+számítását, mert a deriváltja $0$ közelében nem $0$-hoz tart@coding_adventures.
 
 === SPH algoritmus menete
 Maga az algoritmus menete könnyen diszkretizálható disztinkt állomásokra. Először is végig kell mennünk minden részecskén minden iterációban, kiszámolni rá a kívánt attribútumokat a szomszédos részecskék segítségével. Ha ezzel végeztünk, akkor még egy ciklusban frissítjük a részecskék pozícióját, valamint a határokkal való esetleges ütközéseket lekezeljük.
