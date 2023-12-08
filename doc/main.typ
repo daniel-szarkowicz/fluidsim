@@ -144,26 +144,58 @@ A közelségi sűrűgséget az alábbi módon:
 ===== Felületi feszültség
 Fontos eleme a folyadékoknak a felületi feszültségük. Ez azért lényeges, mert enélkül a szimulált folyadék lényegesen darabosabb lesz. Ezt több attribútum együttesével lehetne elérni, azonban mi, csak a viszkozitással foglalkoztunk. Ezt az alábbi módon számoltuk:
 
+Pszeudó kód:
+```
+for részecske_1 in részecskék:
+  viszkozitás_impulzus := null_vec(d)
+  for részecske_2 in szomszédok:
+    távolság <= távolság részecske_1 és részecske_2 között
+    irány_vek <= irányvektor részecske_2-ből részecske_1-be
+    u <= részecske_2 sebessége részecske_1 irányába
+    if ||u|| <= 0: continue
+    viszkozitás_impulzus += viszkozitás_kernel(távolság) * (coeff * u) * irány_vek
 
-= Implementáció
+  részecske_1.sebesség += viszkozitás_impulzus * eltelt_idő
+```
+, ahol null_vec(d) olyan sorvektor, ami d db nullát tartalmaz, valamint coeff a koefficiense az u-nak, azaz, azt adjuk meg, hogy mennyire akarjuk folyékonyra, vagy sűrűre a folyadékunk. Nagyobb coeff tartósabb, viszkózusabb folyadékot eredményez.
 
-== Szimuláció
+==== Erő meghatározása
+Miután meghatároztuk a részecskék attribútumait, már csak egy lépés van hátra, hogy mozgassuk is őket. Ehhez először ki kell számolni a rájuk ható eredő erőt.
+Az eredő erő kiszámítását a következő képpen tettük mi meg:
 
-#todo[smoothing kernel @coding_adventures @sph_tutorial]
+Pszeudó kód:
+```
+for részecske in részecskék:
+  eredő_erő := null_vec(d)
+  for szomszéd in szomszédok:
+    táv <= szomszéd és részecske közötti távolság
+    irány <= szomszédból részecskébe mutató egységvektor
+    if táv = 0: véletlen irányba állítjuk a részecske irányvektorát
+    nyomás <= (részecske.nyomás + szomszéd.nyomás) / 2
+    eredő_erő -= irány * nyomás * derivált_kernel / szomszéd.sűrűség
+    eredő_erő -= közelségi_sűrűségből származó erő
 
-#todo[density @coding_adventures @sph_tutorial]
+  részecske.sebesség += eredő_erő / részecske.sűrűség * eltelt_idő
+```
+Ennek a ciklusnak a végeztével minden elemünk megvan, hogy végre mozgassuk a részecskéket.
+==== A részecskék pozícióinak módosítása
+Ez a lépés igazán triviális. Annyi a lényege, hogy végig iterálunk a részecskéken és mindnek először a sebességét módosítjuk, majd a pozíciójukat az eltelt idő függvényében.
 
-#todo[pressure force @coding_adventures @sph_tutorial]
+Pszeudó kód:
+```
+for részecske in részecskék:
+  részecske.sebesség += gravitáció * eltelt_idő
+  részecske.pozíció += részecske.sebesség * eltelt_idő
+  if szimulációs téren kivül a részecske.pozíció: visszahelyezés a szimulációs térbe
+```
 
-#todo[viscosity, near pressure (referencia)]
+Fontos megjegyezni, hogy stabilitás szempontjából, az attribútumok számításánál érdemes a jósolt pozíciókkal számolni. Ezt azt jelenti, hogy amikor i.e. a szomszédok megkeresésénél azt a pozíciót vesszük, amit úgy kapunk, hogy a részecske jelenlegi sebességét eltelt idővel szorozva hozzáadjuk a pozícióhoz. Ezt nevezzük jósolt pozíciónak. Ezzel az értékkel csak az attribútumok számolásánál dolgozunk, amikor az utolsó ciklusban a részecskéket mozgatjuk, akkor az eredeti pozícióhoz adjuk hozzá az elmozdulást, nem pedig a jósolthoz. Ez a metódus nagy különbséget jelent, mivel enélkül, nem csillapodnak le, vagy nagyon nehezen a részecskék.
+=== Fejlődés  
+Az SPH, amit implementáltunk javítható több helyen is. Egyik nagy lehetőség az az, hogy nem csak viszkozitást, hanem úgymond rugókat, valamint nyúlást is szimulálunk, amik mind segítenék a felületi feszültség akkurátusabb szimulálását. @pvfs
 
-#todo[
-  Továbbiak
-  + Boundary force
-  + Rigid body interakció
-  + Soft body
-  + ...
-]
+Fontos még azt is megjegyezni, hogy egyszerű szimulációs teret készítettünk csak a programnak, azaz, szilárd testet nem lehetne még beleejteni. Erre egy jó megoldás az úgy nevezett határ mintavételezéssel. Ez a módszer azt takarja, hogy a szilárd test határánál is részecskék vannak egységesen elosztva, több rétegben, amiknek pont akkora lenne a sűrűsége, hogy nem menjen bele a folyadék részecske, azonban, nem akkora, hogy ne tudjon lenyugodni a test. Ennek a módszernek az implementálása egy érdekes kitérés lehet, amellyel már a folyadék szilárd testekkel való interakcióját is tudnánk szimulálni.
+
+Ezeken kívül használhatnánk még más metódust az időléptetésre. Erre léteznek kiforrott, biztonságos algoritmusok, amik nagyobb időintervallumokat is relatíve jól lekezelnek.
 
 == Optimalizáció
 
