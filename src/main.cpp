@@ -23,6 +23,7 @@ int main(void) {
     const char* hash = "src/shader/hash.glsl";
     const char* kernel = "src/shader/sph/kernel.glsl";
     const char* for_neighbor = "src/shader/for_neighbor.glsl";
+    const char* clamp_to_bounds = "src/shader/sph/clamp_to_bounds.glsl";
 
     GraphicsShader particle_shader = GraphicsShader::builder()
                                .vertex_source(version)
@@ -68,6 +69,7 @@ int main(void) {
                              .compute_file(particle)
                              .compute_file(globals)
                              .compute_file(globals_layout)
+                             .compute_file(clamp_to_bounds)
                              .compute_file(hash)
                              .compute_file(kernel)
                              .compute_file("src/shader/sph/predict_and_hash.glsl")
