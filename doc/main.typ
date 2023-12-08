@@ -380,11 +380,18 @@ nagy valószínűseggel túl mutat a BSc-n.
   image("imgs/two_densities.png", width: 80%),
   caption: [Két különböző sűrűségű folyadék],
 )
-#todo[gyengén összenyomható folyadék]
 
-#todo[különböző sűrűségű folyadékok (csak úgy működik, de akkor is menő)]
+#figure(
+  image("imgs/3d_random.png", width: 80%),
+  caption: [
+    3 dimenziós szimuláció pár pillanattal inicializáció után (50000 részecske 27 fps)
+  ]
+)
 
-#todo[2d sok részecske (\~25000) egy laptop gpu-n kb. real-time]
+#figure(
+  image("imgs/3d_dam_break.png", width: 80%),
+  caption: [3 dimenziós "Dam Break" szimuláció (50000 részecske 27 fps)]
+)
 
 = Összefoglalás
 
