@@ -7,7 +7,7 @@
     (name: "Nagy Áron Artúr", email: "nagyaronartur@edu.bme.hu"),
     (name: "Szarkowicz Dániel", email: "szarkowicz.daniel@edu.bme.hu"),
   ),
-  date: "2023. December 5.",
+  date: "2023. December 8.",
 )
 
 #let todo(content) = text(red, content)
@@ -155,7 +155,7 @@ Fontos eleme a folyadékoknak a felületi feszültségük. Ez azért lényeges, 
 
 == Optimalizáció
 
-A program #todo[nemhivatalos] célja valós idejű folyadékszimuláció volt, így
+A program célja valós idejű folyadékszimuláció volt, így
 ahhoz, hogy minél részletesebb szimulálást hajthassunk végre, növelnünk kellett a szimulált részecskék számát. Ennek eléréséhez különböző optimalizálási
 stratégiákat kellett implementálni.
 
@@ -331,11 +331,14 @@ mert így cache barátabb lenne az iterálás.
 == Vizualizáció
 
 A részecskék jelenleg egyszerű billboardokkal vannak megjelenítve. A GUI-ban
-lehet állítani, hogy mi szerint legyenek kiszínezve a részecskék.
+lehet állítani, hogy mi szerint legyenek kiszínezve a részecskék. A GUI-hoz a
+Dear ImGui#footnote[https://github.com/ocornut/imgui/]-t használjuk.
 
 A folyadék vizualizációjához többféle módszert lehet a jövőben kipróbálni. Egy
-#todo[elterjedt megoldás] a folyadékot #todo[metaballs]-al implicit felületté
-alakítani, majd ezt a felületet #todo[marching cubes]-al vagy sugárkövetéssel
+elterjedt megoldás a folyadékot
+metaballs#footnote[https://en.wikipedia.org/wiki/Metaballs]-al implicit
+felületté alakítani, majd ezt a felületet
+marching cubes#footnote[https://en.wikipedia.org/wiki/Marching_cubes]-al vagy sugárkövetéssel
 megjeleníteni.
 
 Egy modernebb megoldás lehet Gaussian splatting
