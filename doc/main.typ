@@ -21,10 +21,10 @@ A folyadék szimulálás egy összetett, komplex feladat, mely még napjainkban 
 
 A szimulálásra két főbb kategória alakult ki:
 - Euler féle hálók
-- Lagrang féle részecskék
+- Lagrange féle részecskék
 Az Euleri megoldások hálókra bontják a tartományt és ezekben a cellákban számolják a folyadék folyamát(sebességét, irányát, adott pontban). Ezekkel a metódusokkal könnyen lehet egy folyadéknak az összenyomhatatlansági attribútumát biztosítani, azonban a folyadék tömegmegmaradása nem mindig biztosított. 
 
-Ezzel szemben a Lagrang féle metódusok a folyadék tömegét bontják fel részecskékre. Mivel nem a tartományt osztottuk fel, hanem a folyadékot, és ennek a részeit követjük az idő függvényében, így a tömegmegmaradás biztosított, azonban az összenyomhatatlansági attribútum nem garantált.
+Ezzel szemben a Lagrange féle metódusok a folyadék tömegét bontják fel részecskékre. Mivel nem a tartományt osztottuk fel, hanem a folyadékot, és ennek a részeit követjük az idő függvényében, így a tömegmegmaradás biztosított, azonban az összenyomhatatlansági attribútum nem garantált.
 Egy másik hátránya a részecske megoldásnak, hogy a vizualizációja a folyadék felszínének nem triviális, hiszen a részecskékkel aktívan elkerüljük a felszín szimulálását, így azt pontosan kiszámítani számításigényes feladat.
 
 == SPH
@@ -33,7 +33,7 @@ A témalabor folyamán a lagrange részecskéken alapuló SPH metódust választ
 A metódus fő előnyei, hogy külön számításigény nélkül biztosított a tömegmegmaradás, valamint a nyomást egyes helyeken a szomszéd részecskékből számítja, nem pedig lineáris egyenletek megoldásával, így adódik az is, hogy disztinktív réteg fog kialakulni két elem között, ahol a részecskék reprezentálják a sűrűbb folyadékot(vizet), a hígabb folyadékot pedig az űr(ami a levegő).
 
 === Kernel függvény
-Az SPH fő eleme a folyadék diszkretizálása úgynevezett kernel függvények segítségével. A valós életeben mintavételezni a dirac-$delta$ függvény segítségével szoktak. A dirac-$delta$ függvényt a következő képpen fogjuk definiálni:
+Az SPH fő eleme a folyadék diszkretizálása úgynevezett kernel függvények segítségével. A valós életeben mintavételezni a dirac-$delta$ segítségével szoktak. A dirac-$delta$ a következő képpen lesz definiálva:
 
 $
   delta(r) = cases(
@@ -46,7 +46,7 @@ $
 $
   integral delta(r) italic(d)v = 1
 $
-Miután definiáltuk a dirac-$delta$-t már csak azokat a függvényeket kell megkonstruálni, amikkel ezt közelíteni fogjuk, hiszen a folytonos dirac-$delta$-t nem lehet diszkrét függvénnyé alakítani. Ezeket a függvényeket fogjuk Kernel függvénynek hívni és W-vel fogjuk jelölni. 
+Miután definiáltuk a dirac-$delta$-t már csak azokat a függvényeket kell megkonstruálni, amikkel ezt közelíteni fogjuk, hiszen a folytonos dirac-$delta$-t nem lehet diszkrét függvénnyé alakítani. Ezeket a függvényeket fogjuk Kernel függvényeknek hívni és W-vel fogjuk jelölni őket. 
 Fontos attribútuma a Kernel függvényeknek, hogy 
 $
   W(r, h) = 0 ", ha" ||r|| >= h ". "
@@ -66,7 +66,7 @@ $
 ==== Kernel függvény grádiense
 Fontos még egy függvényt definiálni. Ez a pótfüggvény grádiense, amit $nabla A$-val jelölünk.
 #math.equation($nabla A_i approx sum_j (A_j  m_j / rho_j  nabla W_("ij"))$) <a_der_appr_w>
-, ahol $W_"ij" "analóg" W(x_i - x_j, h)$-val.  Az #emph[@a_der_appr_w]-ben található Kernel függvény grádiense pedig, az $x_i - x_j$ szerinti deriváltja, mert a smoothing length-et konstansnak tekintjük a szimuláció teljes lefutása során. 
+, ahol $W_"ij" "analóg" W(x_i - x_j, h)$-val.  Az #emph[@a_der_appr_w]-ban található Kernel függvény grádiense pedig, az $x_i - x_j$ szerinti deriváltja, mert a smoothing length-et konstansnak tekintjük a szimuláció teljes lefutása során. 
 
 ==== Kernel választás
 Kernel választásnál, amíg a szempontokat szem előtt tartjuk, addig nagyon sok féle lehetőségünk van. A papír@sph_tutorial szerint egy szokványos választás a köbös görbe.
@@ -92,7 +92,7 @@ Maga az algoritmus menete könnyen diszkretizálható disztinkt állomásokra. E
 Pszeudó kód:
 ```
 for részecske_1 in részecskék:
-  for részecske_2 in részecskéh:
+  for részecske_2 in részecskék:
     számold ki a kívánt attribútumait részecske_1-nek részecske_2 függvényében
 
 for részecske_1 in részecskék:
@@ -112,9 +112,9 @@ Ezeken kívűl más attribútumokat is ki lehet még számítani, hogy még pont
 
 ==== Attribútumok kiszámítása
 ===== Sűrűség kiszámítása
-Az i. részecske sűrűség attribútumának kiszámítása az alábbi, egyszerű módon, elvégezhető:
+Az i. részecske sűrűség attribútumának kiszámítása az alábbi, egyszerű, módon elvégezhető:
 #math.equation($rho_i = sum_j m_j W_(i j)$)
-, ahol $rho_i$, az i. részecske sűrűsége, $m_j$ a j. részecske tömege, $W_(i j)$ pedig kernel függvény.
+, ahol $rho_i$, az i. részecske sűrűsége, $m_j$ a j. részecske tömege, $W_(i j)$ pedig egy kernel függvény.
 
 Ennek a megoldásnak egy hátránya, hogy a felületeknél alulbecsli egy részecske sűrűségét, abból az egyszerű okból kifolyólag, hogy kevesebb szomszédja van, amiatt, mert a levegőben, nincsenek részecskék.
 #figure(
@@ -125,7 +125,7 @@ Ennek a megoldásnak egy hátránya, hogy a felületeknél alulbecsli egy része
 )
 
 ===== Nyomás sűrűségből  
-Miután meghatároztuk a részecskék sűrűségeit, a következő kérdés az, hogy ezzel, hogyan tudjuk befolyásolni a mozgásukat. Erre ad egy megoldást az a metódus, ha minden részecskére kiszámítjuk a nyomást a sűrűségből. Ehhez két konstanst definiálnunk kell, hogy a konverzió működhessen:
+Miután meghatároztuk a részecskék sűrűségeit a következő kérdés az, hogy ezzel, hogyan tudjuk befolyásolni a mozgásukat. Erre ad egy megoldást az, ha kiszámoljuk minden részecskénél a nyomást. Ehhez két konstanst definiálnunk kell, hogy a konverzió működhessen:
 + nyugalmi sűrűség $rho_0$
 + rugalmassági konstans $k$.
 A nyugalmi sűrűséggel azt határozzuk meg, hogy a folyadékban a részecskéknek, nyugalmi állapotban, milyen sűrűségekkel kellene rendelkezzenek. A másik konstanssal, rugalmassági konstanssal, azt határozzuk meg, hogy mekkora befolyása legyen a sűrűségnek a szimulációra. Minél nagyobb k, annál kevésbé összenyomható a folyadék, azonban finomabb időközönként kell szimulálni, tehát ez egy optimalizációs kérdés.
