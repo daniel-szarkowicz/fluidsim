@@ -426,7 +426,7 @@ nagy valószínűseggel túl mutat a BSc-n.
 )
 
 = Összefoglalás
-Összességében nagyon érdekes volt egy témával mélyebben megismerkedni. Újszerű volt akedmikus papírokat olvasni, azokat értelmezni, majd ezek alapján egy programot készíteni. A szimulációnkban van még mit polírozni, hogy élethűbb eredményeket kapjunk. Más vizualizációs eszközöket használni, hogy valósághű felszínt is nyerjen a folyadék. Szolid felszín detekciót is lehetne beleírni a programba, hogy például csónak ringatózását szimuláljuk, vagy szelet, hogy így generáljunk hullámokat, vagy akár hőszimulálást is, hogy áramlatokat hozzunk létre. Azonban ezek mind a jövő témái. 
+Összességében nagyon érdekes volt egy témával mélyebben megismerkedni. Újszerű volt akademikus papírokat olvasni, azokat értelmezni, majd ezek alapján egy programot készíteni. A szimulációnkban van még mit polírozni, hogy élethűbb eredményeket kapjunk. Más vizualizációs eszközöket használni, hogy valósághű felszínt is nyerjen a folyadék. Szolid felszín detekciót is lehetne beleírni a programba, hogy például csónak ringatózását szimuláljuk, vagy szelet, hogy így generáljunk hullámokat, vagy akár hőszimulálást is, hogy áramlatokat hozzunk létre. Azonban ezek mind a jövő témái. 
 
 Mi meg szeretnénk köszönni a segítséget a konzulensünktől, Kárpáti Attilától, valamint az olvasótól, hogy idáig eljutott.
 #bibliography("references.yml")
